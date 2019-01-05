@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>ATSAM4S Interrupts</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">          
+  <meta name="description" content="ATSAM4S TUTORIAL">
+  <meta name="keywords" content="No ASF, ARM, Atmel-ICE, ATSAM4S">
+  <meta name="author" content="Robert M">	
+  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="css.css">
+	<script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+          (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+          })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+          ga('create', 'UA-50914817-1', 'mwmw.ca');
+          ga('send', 'pageview');
+	</script>  
+</head>
+
+<body>
+
+
+
+<nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="http://www.mwmw.ca">mwmw.ca</a>
+    </div>
+    <ul class="nav navbar-nav">
+      <li class="active"><a href="index.html">Atsam4s Tutorial</a></li>      
+      <li><a href="projects.html">Projects</a></li> 
+      <li><a href="contact.html">Contact</a></li> 
+    </ul>
+  </div>
+</nav>
+
+<div class="container-fluid text-left">    
+  <div class="row content">
+    <div class="col-sm-2 sidenav">	
+	<ul class="nav nav-pills nav-stacked btn-md ">
+	<li><a href="index.html" class="active">Getting Started</a></li>	
+	<li><a href='hardware.html' >Hardware</a></li>
+	<li><a href='programming.html' >Programming</a></li>
+	<li><a href='bootloader.html' >Boot Loader</a></li>
+	<li><a href='bittwiddling.html' >Bit Twiddling</a></li>
+	<li><a href='gpio.html' ><b>GPIO</b> - General Purpose Input/Output</a></li>
+	<li><a href='clock.html' ><b>PMC</b> - System Clock</a></li>
+	<li  class="active"><a href='interrupts.html' ><b>INT</b> - Interrupts</a></li>
+	<li><a href='uart.html' ><b>UART</b> - Universal Asynchronous Receiver-Transmitter</a></li>	
+	<li><a href='timercounter.html' ><b>TC</b> - Timer/Counter Overflow Interrupt</a></li>
+	<li><a href='timercounterdelay.html' ><b>TC</b> - Timer/Counter Compare Interrupt</a></li>
+	<li><a href='i2c.html' ><b>I2C</b> - Inter-integrated Circuit</a></li>
+	<li><a href='spi.html' ><b>SPI</b> - Serial Peripheral Interface</a></li>
+	<li><a href='gpio-glcd.html' ><b>GPIO</b> - GLCD</a></li>
+	<li><a href='rtc.html' ><b>RTC</b> - Real Time Clock</a></li>
+	<li><a href='rtt.html' ><b>RTT</b> - Real Time Timer</a></li>
+	<li><a href='adc.html' ><b>ADC</b> - Analog Digital Converter</a></li>
+	<li><a href='dacc.html' ><b>DACC</b> - Digital Analog Converter</a></li>
+	<li><a href='sleep.html' ><b>SUPCC</b> - Sleep/Wake/Power Saving</a></li>
+	<li><a href='qdec.html' ><b>QDEC</b> - Quadrature Signal Decoder</a></li>
+	<li><a href='pwm.html' ><b>PWM</b> - Pulse Width Modulation</a></li>
+	<li><a href='debugging.html' >Debugging</a></li>
+	</ul>
+    </div>
+	
+    <div class="col-sm-8 text-left"> 	
+	<h2>Interrupts (IRQn)</h2>
+		
+
+<p>When an interrupt is triggered, the program stops where it's at and runs a block of code depending on the interrupt that was triggered.  After the block of code finishes the program will continue where it left off before the interrupt was generated.  This is handy for waiting for things to happen.  Polling for UART characters to be received or testing a GPIO to see if a button was pressed is very inefficient.  Instead, we can set an interrupt to wait for these events to happen and run our code.</p>
+<h3>Prerequisites</h3>
+<ul>
+	<li> Set the master clock
+	<li> Enable the peripheral interrupt
+	<li> In the case of GPIO interrupts, set the type of interrupt (high, low, change, rising edge, etc)
+</ul>
+
+<h3>Setup</h3>
+<p>You can find information on interrupts in the following sections of the datasheet: 12.8 Nested Vectored Interrupt Controller, 11.1 Peripheral identifiers, all peripheral chapters that use interrupts.</p>
+
+<p>Let's setup an example of creating an interrupt when a button is pressed or released</p>
+<a href='images/interrupt.jpg'><img src='images/interrupt_small.jpg' style="border:1px solid #aaaaaa"></a><br><br>
+<p><span class='text-danger'>*Note* </span>The pin, PA24, has a weak internal pull up enabled (100k).  If the pull up doesn't bring the voltage high fast enough, you can put a stronger pull up (1k) between the pin and the button.
+Connect an led with current limiting resistor to PA11.  We will set this as an output and toggle between high and low to turn it on and off.<br><br>
+Connect a button (SPST) to PA24 and set it as input.  Since the button will connect the pin to ground, we will need to enable a weak pull up resistor so that when the button isn't pressed it will rise back up to high.</p>
+
+To setup an interrupt we will need to do the following:<br>
+<ol>
+	<li> Set the master clock
+	<li> Enable the peripheral clock for PIOA
+	<li> Configure pin detecting interrupt to input
+	<li> Enable interrupts on the selected pin
+	<li> Enable interrupts in the NVIC for PIOA
+	<li> Write the PIOA_Handler function - this is the code that gets run when an interrupt is triggered.
+</ol>
+<span class='text-warning'>*Note*</span> To clear the interrupt flag you must read the register REG_PIOA_ISR.
+<br><br>
+
+<h3>Example</h3>
+
+<pre>
+<span class="flow">#include</span> <span class="method">"sam.h"</span>
+
+<span class="flow">void</span> <span class="method">clock_init</span>(){	
+	<span class="comment">//enable external crystal</span>
+	<span class="define">REG_CKGR_MOR</span> |= <span class="define">CKGR_MOR_KEY_PASSWD</span> | <span class="define">CKGR_MOR_MOSCXTEN</span>;
+	<span class="comment">//wait for crystal to become ready</span>
+	<span class="flow">while</span> (!(<span class="define">REG_PMC_SR</span> & <span class="define">PMC_SR_MOSCXTS</span>)); 
+	<span class="comment">//select crystal</span>
+	<span class="define">REG_CKGR_MOR</span> |= <span class="define">CKGR_MOR_KEY_PASSWD</span> | <span class="define">CKGR_MOR_MOSCSEL</span>; 
+	<span class="comment">//master clock source selection - choose main clock</span>
+	<span class="define">REG_PMC_MCKR</span> |= <span class="define">PMC_MCKR_CSS_MAIN_CLK</span>; 
+	<span class="comment">//wait until main clock ready</span>
+	<span class="flow">while</span> (!(<span class="define">REG_PMC_SR</span> & <span class="define">PMC_SR_MCKRDY</span>)); 
+	<span class="comment">//select processer prescaler (0 - no divisor)</span>
+	<span class="define">REG_PMC_MCKR</span> |= <span class="define">PMC_MCKR_PRES_CLK_1</span>; 
+	<span class="comment">//wait until main clock ready</span>
+	<span class="flow">while</span> (!(<span class="define">REG_PMC_SR</span> & <span class="define">PMC_SR_MCKRDY</span>));
+}
+
+<span class="var">int</span> <span class="method">main</span>(<span class="var">void</span>)
+{
+	<span class="method">SystemInit</span>();
+	<span class="method">clock_init</span>();
+	
+	<span class="comment">//enable clock for PIOA</span>
+	REG_PMC_PCER0 |= PMC_PCER0_PID11;
+	
+	<span class="comment">//Setup Input and Output pins and an interrupt</span>
+	<span class="comment">//set PA30 as controllable by the PIO controller (disable peripheral)</span>
+	<span class="define">REG_PIOA_PER</span> |= <span class="define">PIO_PER_P11</span>;
+	<span class="comment">//set PA30 as output for LED</span>
+	<span class="define">REG_PIOA_OER</span> |= <span class="define">PIO_OER_P11</span>;
+	<span class="comment">//set PA30 high</span>
+	<span class="define">REG_PIOA_SODR</span> |= <span class="define">PIO_SODR_P11</span>; 
+	
+	<span class="comment">//set PA24 as controllable by the PIO controller (disable peripheral)</span>
+	<span class="define">REG_PIOA_PER</span> |= <span class="define">PIO_PER_P24</span>;
+	<span class="comment">//output disable register (set as input for button)</span>
+	<span class="define">REG_PIOA_ODR</span> |= <span class="define">PIO_ODR_P24</span>;
+	<span class="comment">//disable pull down</span>
+	<span class="define">REG_PIOA_PPDDR</span> |= <span class="define">PIO_PPDDR_P24</span>;
+	<span class="comment">//enable internal pull up resistor on PA24</span>
+	<span class="define">REG_PIOA_PUER</span> |= <span class="define">PIO_PUER_P24</span>; 
+	<span class="comment">//enable glitch filter on PA24 (button debounce)</span>
+	<span class="define">REG_PIOA_IFER</span> |= <span class="define">PIO_IFER_P24</span>;
+	<span class="comment">//Read ISR so that it clears any interrupt flags that might be there</span>
+	<span class="var">uint32_t</span> temp = <span class="define">REG_PIOA_ISR</span>;
+	<span class="comment">//enable input change interrupt on PA24</span>
+	<span class="define">REG_PIOA_IER</span> |= <span class="define">PIO_IER_P24</span>;
+	<span class="comment">//enable PIOA interrupts</span>
+	<span class="method">NVIC_EnableIRQ</span>(<span class="define">PIOA_IRQn</span>);	
+	
+    <span class="flow">while</span> (1)
+    {
+		<span class="comment">//the program will loop here until an interrupt is triggered</span>
+    }
+}
+
+<span class="comment">//when PIOA interrupt is triggered this block of code will run</span>
+<span class="var">void </span><span class="define">PIOA_Handler</span>(<span class="var">void</span>) { 	
+	<span class="comment">// reading PIOA_ISR will clear interrupt flags</span>
+	<span class="var">uint32_t</span> status = <span class="define">REG_PIOA_ISR</span>;
+	
+	<span class="flow">if</span> ((status & <span class="define">PIO_ISR_P24)</span> >= 1){ <span class="comment">//pin change interrupt on P24</span>
+		<span class="comment">//if PA11 high then set low, if PA11 low then set high</span>
+		<span class="flow">if</span> ((<span class="define">REG_PIOA_PDSR</span> & <span class="define">PIO_ODSR_P11</span>)>=1){			
+			<span class="comment">//set PA11 low</span>
+			<span class="define">REG_PIOA_CODR</span> |= <span class="flow">PIO_CODR_P11</span>; 
+		}		
+		<span class="flow">else</span>{
+			<span class="comment">//set PA11 high</span>
+			<span class="define">REG_PIOA_SODR</span> |= <span class="define">PIO_SODR_P11</span>; 
+		}
+	}
+}
+		
+</pre>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	</div>
+	<br>
+        
+</div>
+
+<footer class="container-fluid text-center">
+  <p></p>
+</footer>
+
+
+</body>
+</html>

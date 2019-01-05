@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>ATSAM4S Tutorial No ASF</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">          
+  <meta name="description" content="ATSAM4S TUTORIAL">
+  <meta name="keywords" content="No ASF, ARM, Atmel-ICE, ATSAM4S">
+  <meta name="author" content="Robert M">	
+  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="css.css">
+	<script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+          (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+          })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+          ga('create', 'UA-50914817-1', 'mwmw.ca');
+          ga('send', 'pageview');
+	</script>  
+</head>
+
+<body>
+
+
+
+<nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="http://www.mwmw.ca">mwmw.ca</a>
+    </div>
+    <ul class="nav navbar-nav">
+      <li class="active"><a href="index.html">Atsam4s Tutorial</a></li>      
+      <li><a href="projects.html">Projects</a></li> 
+      <li><a href="contact.html">Contact</a></li> 
+    </ul>
+  </div>
+</nav>
+
+<div class="container-fluid text-left">    
+  <div class="row content">
+    <div class="col-sm-2 sidenav">	
+	<ul class="nav nav-pills nav-stacked btn-md ">
+	<li class="active"><a href="index.html" class="active">Getting Started</a></li>	
+	<li><a href='hardware.html' >Hardware</a></li>
+	<li><a href='programming.html' >Programming</a></li>
+	<li><a href='bootloader.html' >Boot Loader</a></li>
+	<li><a href='bittwiddling.html' >Bit Twiddling</a></li>
+	<li><a href='gpio.html' ><b>GPIO</b> - General Purpose Input/Output</a></li>
+	<li><a href='clock.html' ><b>PMC</b> - System Clock</a></li>
+	<li><a href='interrupts.html' ><b>INT</b> - Interrupts</a></li>
+	<li><a href='uart.html' ><b>UART</b> - Universal Asynchronous Receiver-Transmitter</a></li>	
+	<li><a href='timercounter.html' ><b>TC</b> - Timer/Counter Overflow Interrupt</a></li>
+	<li><a href='timercounterdelay.html' ><b>TC</b> - Timer/Counter Compare Interrupt</a></li>
+	<li><a href='i2c.html' ><b>I2C</b> - Inter-integrated Circuit</a></li>
+	<li><a href='spi.html' ><b>SPI</b> - Serial Peripheral Interface</a></li>
+	<li><a href='gpio-glcd.html' ><b>GPIO</b> - GLCD</a></li>
+	<li><a href='rtc.html' ><b>RTC</b> - Real Time Clock</a></li>
+	<li><a href='rtt.html' ><b>RTT</b> - Real Time Timer</a></li>
+	<li><a href='adc.html' ><b>ADC</b> - Analog Digital Converter</a></li>
+	<li><a href='dacc.html' ><b>DACC</b> - Digital Analog Converter</a></li>
+	<li><a href='sleep.html' ><b>SUPCC</b> - Sleep/Wake/Power Saving</a></li>
+	<li><a href='qdec.html' ><b>QDEC</b> - Quadrature Signal Decoder</a></li>
+	<li><a href='pwm.html' ><b>PWM</b> - Pulse Width Modulation</a></li>
+	<li><a href='debugging.html' >Debugging</a></li>
+	</ul>	
+    </div>
+	
+    <div class="col-sm-8 text-left"> 
+	
+		<h2>An Introduction to Atmel Arm Cortex M4: ATSAM4S</h2>
+		
+		<p>This introduction to the ATSAM4S series of Microchip arm microcontrollers will help you get started programming without using <abbr title="Atmel Software Framework">ASF</abbr>.  Although the ASF is good, especially when you're porting code from one chip to another, I wanted to directly setup peripherals by setting registers directly rather than having the hardware abstracted away.  These tutorials assume that you already have some C experience and have programmed other microcontrollers such as the AVR or XMEGA.<br><br>
+		Keep in mind that these examples are the bare minimum required to get started.  You should really go through the datasheet to check for other options, power saving techniques and chapters that aren't covered under this basic tutorial.  This is still a work in progress and there should be new content weekly.  If you have any requests for things you would like to see then feel free to send me an email at <a href='mailto:rmcmillin@mwmw.ca?subject=mwmw.ca:%20ATSAM4S%20Question' class='bodylink'>rmcmillin@mwmw.ca</a>.</p>
+		<p>This tutorial doesn't use the Atmel Software Framework.  That's not to say it's bad, because it's not.  ASF is good when you need to change MCUs in your design without changing the code.  You can easily port from chip to another.  In the past, I changed from Arduino to bare AVR and Xmega because I felt that Arduino abstracted too much away from the hardware.  I get a similar feeling from ASF.  When I started with ARM I wanted to toggle pins and set registers rather than use ASF, but when I searched the internet for resources I could only find links to other people looking for similar resources.  For that reason, I wrote this tutorial and I hope it helps someone else out.  Even though the Atsam4s pdf is ~1200 pages, reading through it is the best way to learn how to use it.  It's intimidating, but as you go from chapter to chapter you will see that there are a lot of similarities in the way peripherals are setup and used.</p>
+		
+		<p>Good Luck!</p>
+		<p>The basic code examples will help you get started programming the ATSAM4S using:</p>
+		<ul>
+			<li>Atmel-Ice programmer/debugger using the JTAG interface
+			<li>Atmel Studio 7
+			<li>C, writing basic drivers from scratch and not using <abbr title="Atmel Software Framework">ASF</abbr>
+			<li>A Dev Board based on ATSAM4S16B
+		</ul>
+		<img src='images/atsam4s16b.jpg' class="img-responsive"><br><br>
+	</div>
+	<br>
+        
+</div>
+
+<footer class="container-fluid text-center">
+  <p></p>
+</footer>
+
+
+</body>
+</html>

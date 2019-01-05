@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>ATSAM4S Digital to Analog Converter Controller (DACC)</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">          
+  <meta name="description" content="ATSAM4S TUTORIAL">
+  <meta name="keywords" content="No ASF, ARM, Atmel-ICE, ATSAM4S">
+  <meta name="author" content="Robert M">	
+  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="css.css">
+	<script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+          (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+          })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+          ga('create', 'UA-50914817-1', 'mwmw.ca');
+          ga('send', 'pageview');
+	</script>  
+</head>
+
+<body>
+
+
+
+<nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="http://www.mwmw.ca">mwmw.ca</a>
+    </div>
+    <ul class="nav navbar-nav">
+      <li class="active"><a href="index.html">Atsam4s Tutorial</a></li>      
+      <li><a href="projects.html">Projects</a></li> 
+      <li><a href="contact.html">Contact</a></li> 
+    </ul>
+  </div>
+</nav>
+
+<div class="container-fluid text-left">    
+  <div class="row content">
+    <div class="col-sm-2 sidenav">	
+	<ul class="nav nav-pills nav-stacked btn-md ">
+	<li ><a href="index.html" class="active">Getting Started</a></li>	
+	<li><a href='hardware.html' >Hardware</a></li>
+	<li><a href='programming.html' >Programming</a></li>
+	<li><a href='bootloader.html' >Boot Loader</a></li>
+	<li><a href='bittwiddling.html' >Bit Twiddling</a></li>
+	<li><a href='gpio.html' ><b>GPIO</b> - General Purpose Input/Output</a></li>
+	<li><a href='clock.html' ><b>PMC</b> - System Clock</a></li>
+	<li><a href='interrupts.html' ><b>INT</b> - Interrupts</a></li>
+	<li><a href='uart.html' ><b>UART</b> - Universal Asynchronous Receiver-Transmitter</a></li>	
+	<li><a href='timercounter.html' ><b>TC</b> - Timer/Counter Overflow Interrupt</a></li>
+	<li><a href='timercounterdelay.html' ><b>TC</b> - Timer/Counter Compare Interrupt</a></li>
+	<li><a href='i2c.html' ><b>I2C</b> - Inter-integrated Circuit</a></li>
+	<li><a href='spi.html' ><b>SPI</b> - Serial Peripheral Interface</a></li>
+	<li><a href='gpio-glcd.html' ><b>GPIO</b> - GLCD</a></li>
+	<li><a href='rtc.html' ><b>RTC</b> - Real Time Clock</a></li>
+	<li><a href='rtt.html' ><b>RTT</b> - Real Time Timer</a></li>
+	<li><a href='adc.html' ><b>ADC</b> - Analog Digital Converter</a></li>
+	<li class="active"><a href='dacc.html' ><b>DACC</b> - Digital Analog Converter</a></li>
+	<li><a href='sleep.html' ><b>SUPCC</b> - Sleep/Wake/Power Saving</a></li>
+	<li><a href='qdec.html' ><b>QDEC</b> - Quadrature Signal Decoder</a></li>
+	<li><a href='pwm.html' ><b>PWM</b> - Pulse Width Modulation</a></li>
+	<li><a href='debugging.html' >Debugging</a></li>
+	</ul>
+    </div>
+	
+    <div class="col-sm-8 text-left"> 	
+		<h2>DACC: Digital to Analog Converter Controller</h2>
+		<p>The ATSAM4S has 2 12 bit DACC channels that run up to the frequency of the main clock / 2. Once data is put into the REG_DACC_CDR (convert data register) the DACC takes 25 dacc clock cycles to turn that 12 bit number into an analog voltage on the selected channel.  There are two ways to select the channel.  By default, the USER_SEL field of the DACC_MR is used or if the TAG bit of the DACC_MR is 1 then the channel is selected by adding bits to the DACC_CDR Register.  In this mode, the two bits, DACC_CDR[13:12], which are otherwise unused, are employed to select the channel in the same way as with the USER_SEL field. Finally, if the WORD field is set, the two bits, DACC_CDR[13:12] are used for channel selection of the first data and the two bits, DACC_CDR[29:28] for channel selection of the second data.</p>
+
+<p>The DACC can generate an interrupt when a channel is finished converting the data into an analog signal by setting the EOC bit in the DACC_ISR.</p>
+
+<p>When the DACC is read to receive data the TxRdy bit will be set in the DACC_ISR.  Do not write to the channel if this bit is not set otherwise the FIFO buffer will become corrupt.</p>
+
+<h3>Setup</h3>
+<p>First we must enable the DACC clock in the PMC.</p>
+<pre><span class="define">REG_PMC_PCER0 </span>|= <span class="define">PMC_PCER0_PID30</span>;</pre>
+<p>If we are going to use interrupts then we have to enable it in the NVIC.</p>
+<pre><span class="method">NVIC_EnableIRQ</span>(<span class="define">DACC_IRQn</span>);</pre>
+<p>By enabling a channel in the DACC_CHER register it also gives control of the pin to the DACC and removes control from the PIO.</p>
+<pre><span class="define">REG_DACC_CHER </span>|= <span class="define">DACC_CHER_CH0</span>;</pre>
+<p>The word transfer bit can set whether or not the full 32 bits will be used from the DACC_CDR or just the lower 16 bits.<br><br>
+Once the clock is started, a channel is enabled we can send data to be sent to the DACC by putting data into the DACC_CDR register.</p>
+
+<h3>Example</h3>
+<p>This is a simple example.  It will just output 1.654v on channel 0.  We could get fancy and include arm_math.h and create a sinwave, but I dont have an oscilloscope to make sure I did it correctly.</p>
+<pre>
+<span class="flow">#include </span><span class="method">"sam.h"</span>
+<span class="flow">#include </span><span class="method">"basic_uart.h"</span>
+
+<span class="var">void</span> <span class="method">clock_init</span>(){
+    <span class="define">REG_CKGR_MOR</span> |= <span class="define">CKGR_MOR_KEY_PASSWD</span> | <span class="define">CKGR_MOR_MOSCXTEN</span>;
+    <span class="flow">while</span> (!(<span class="define">REG_PMC_SR</span> & <span class="define">PMC_SR_MOSCXTS</span>));
+    <span class="define">REG_CKGR_MOR </span>|= <span class="define">CKGR_MOR_KEY_PASSWD </span>| <span class="define">CKGR_MOR_MOSCSEL</span>;
+    <span class="define">REG_PMC_MCKR </span>|= <span class="define">MC_MCKR_CSS_MAIN_CLK</span>;
+    <span class="flow">while </span>(!(<span class="define">REG_PMC_SR </span>& <span class="define">PMC_SR_MCKRDY</span>));
+    <span class="define">REG_PMC_MCKR </span>|= <span class="define">PMC_MCKR_PRES_CLK_1</span>;
+    <span class="flow">while</span> (!(<span class="define">REG_PMC_SR</span> & <span class="define">PMC_SR_MCKRDY</span>));
+}
+
+<span class="var">void </span><span class="method">dacc_init</span>(){
+    <span class="comment">//enable dacc peripheral clock</span>
+    <span class="define">REG_PMC_PCER0 </span>|= <span class="define">PMC_PCER0_PID30</span>;
+    <span class="comment">//enable dacc interrupts</span>
+    <span class="comment">//NVIC_EnableIRQ(DACC_IRQn);</span>
+	
+    <span class="comment">//Most settings we want are 0 already</span>
+    <span class="comment">//tag mode on - use bits in conversion data register to select output channel</span>
+    <span class="comment">//REG_DACC_MR |= DACC_MR_TAG | DACC_MR_ONE;</span>
+    <span class="comment">//set half word transfer (16bit)</span>
+    <span class="comment">//REG_DACC_MR &= ~DACC_MR_WORD;	</span>
+    <span class="comment">//run in free mode (no external trigger)</span>
+    <span class="comment">//REG_DACC_MR &= ~DACC_MR_TRGEN;</span>
+		
+    <span class="comment">//enable channel 0</span>
+    <span class="comment">//setting this bit also gives dacc control of the pin and disables the PIO on this pin</span>
+    <span class="define">REG_DACC_CHER </span>|= <span class="define">DACC_CHER_CH0</span>;	
+}
+
+<span class="var">void </span><span class="method">dacc_write</span>(<span class="var">uint16_t </span>data,<span class="var"> uint8_t </span>channel){ 
+    <span class="flow">if </span>(channel == 0){		
+        <span class="define">REG_DACC_MR </span>|= <span class="define">DACC_MR_USER_SEL</span>(0);		
+    }
+    <span class="flow">else if </span>(channel == 1){	
+        <span class="define">REG_DACC_MR </span>|= <span class="define">DACC_MR_USER_SEL</span>(1);		
+    }
+    <span class="comment">//put data into convert data register</span>
+    <span class="define">EG_DACC_CDR</span> |= data;
+    <span class="comment">//after 25 dacc clock cycles the analog voltage will output on the channel pin</span>
+}
+
+<span class="var">int </span><span class="method">main</span>(<span class="var">void</span>)
+{ 	
+    <span class="method">SystemInit</span>();
+    <span class="method">clock_init</span>();
+    <span class="method">UART_Init</span>();
+    <span class="method">dacc_init</span>();
+    
+    <span class="var">uint32_t</span> status = 0;
+    <span class="flow">while </span>(1)
+    {	
+        status = <span class="define">REG_DACC_ISR</span>;
+        <span class="flow">if </span>((status & <span class="define">DACC_ISR_TXRDY</span>)>=1){			
+            <span class="comment">//DACC ready to receive data</span>
+            <span class="method">dacc_write</span>(2048,0); <span class="comment">//1.654v output (3.3v advref)	</span>	
+        }		
+    }	
+}
+</pre>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	</div>
+	<br>
+        
+</div>
+
+<footer class="container-fluid text-center">
+  <p> </p>
+</footer>
+
+
+</body>
+</html>

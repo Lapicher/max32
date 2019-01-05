@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>ATSAM4S Real Time Clock</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">          
+  <meta name="description" content="ATSAM4S TUTORIAL">
+  <meta name="keywords" content="No ASF, ARM, Atmel-ICE, ATSAM4S">
+  <meta name="author" content="Robert M">	
+  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="css.css">
+	<script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+          (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+          })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+          ga('create', 'UA-50914817-1', 'mwmw.ca');
+          ga('send', 'pageview');
+	</script>  
+</head>
+
+<body>
+
+
+
+<nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="http://www.mwmw.ca">mwmw.ca</a>
+    </div>
+    <ul class="nav navbar-nav">
+      <li class="active"><a href="index.html">Atsam4s Tutorial</a></li>      
+      <li><a href="projects.html">Projects</a></li> 
+      <li><a href="contact.html">Contact</a></li> 
+    </ul>
+  </div>
+</nav>
+
+<div class="container-fluid text-left">    
+  <div class="row content">
+    <div class="col-sm-2 sidenav">	
+	<ul class="nav nav-pills nav-stacked btn-md ">
+	<li><a href="index.html" class="active">Getting Started</a></li>	
+	<li><a href='hardware.html' >Hardware</a></li>
+	<li><a href='programming.html' >Programming</a></li>
+	<li><a href='bootloader.html' >Boot Loader</a></li>
+	<li><a href='bittwiddling.html' >Bit Twiddling</a></li>
+	<li><a href='gpio.html' ><b>GPIO</b> - General Purpose Input/Output</a></li>
+	<li><a href='clock.html' ><b>PMC</b> - System Clock</a></li>
+	<li><a href='interrupts.html' ><b>INT</b> - Interrupts</a></li>
+	<li><a href='uart.html' ><b>UART</b> - Universal Asynchronous Receiver-Transmitter</a></li>	
+	<li><a href='timercounter.html' ><b>TC</b> - Timer/Counter Overflow Interrupt</a></li>
+	<li><a href='timercounterdelay.html' ><b>TC</b> - Timer/Counter Compare Interrupt</a></li>
+	<li><a href='i2c.html' ><b>I2C</b> - Inter-integrated Circuit</a></li>
+	<li><a href='spi.html' ><b>SPI</b> - Serial Peripheral Interface</a></li>
+	<li><a href='gpio-glcd.html' ><b>GPIO</b> - GLCD</a></li>
+	<li  class="active"><a href='rtc.html' ><b>RTC</b> - Real Time Clock</a></li>
+	<li><a href='rtt.html' ><b>RTT</b> - Real Time Timer</a></li>
+	<li><a href='adc.html' ><b>ADC</b> - Analog Digital Converter</a></li>
+	<li><a href='dacc.html' ><b>DACC</b> - Digital Analog Converter</a></li>
+	<li><a href='sleep.html' ><b>SUPCC</b> - Sleep/Wake/Power Saving</a></li>
+	<li><a href='qdec.html' ><b>QDEC</b> - Quadrature Signal Decoder</a></li>
+	<li><a href='pwm.html' ><b>PWM</b> - Pulse Width Modulation</a></li>
+	<li><a href='debugging.html' >Debugging</a></li>
+	</ul>
+    </div>
+	
+    <div class="col-sm-8 text-left"> 	
+		<h2>RTC: Real Time Clock</h2>
+		
+<p>The real time clock uses the slow clock which can be set to the internal RC Oscillator or an external crystal.  In this example we will use an external crystal, so we need to change from the default setting of using the RC Osc and change the slow clock to the external crystal.<p>
+<h3>Setup</h3>
+<p>We can accept most of the default settings for the RTC.  We will change the slow clock to use the external crystal with one command which also disables the PIO controller on the XTAL pins.  This command needs to be OR'd with a password to be able to change it. After selecting the external crystal, wait for it to be enabled by polling the SUPC status register's OSCSEL bit.  The crystal that we are using has a frequency tolerance of +-20ppm.  We will setup the drift correction for this as well.  If the ppm is above 30 then we use the formula:</p>
+<pre>correction = (3906/20*ppm) - 1</pre>
+If the crystal's ppm is 0 - 30 ppm then we use the following formula:
+<pre>correction = (3906/ppm)-1</pre>
+The frequency tolerance of our crystal is 20, so we will use the second formula.  (3906/20*20)-1 = 8.765 ~ 9
+
+
+<pre>
+<span class="var">void</span> <span class="method">slowClock_init</span>(){	
+    <span class="comment">//slow clock setup</span>
+    <span class="comment">//switch from RC osc to external crystal, disable RC osc, disable PIO on xtal pins</span>
+    <span class="define">REG_SUPC_CR </span>|= <span class="define">SUPC_CR_XTALSEL </span>| <span class="define">SUPC_CR_KEY_PASSWD</span>;
+    <span class="comment">//read status register.oscsel bit and wait for slow clock to be selected</span>
+    <span class="flow">while</span> (!(<span class="define">REG_SUPC_SR</span> & <span class="define">SUPC_SR_OSCSEL</span>));
+    <span class="comment">//set crystal correction</span>
+    <span class="define">REG_RTC_MR </span>&= ~<span class="define">RTC_MR_HIGHPPM</span>;
+    <span class="comment">//correction = (3906/20*ppm)-1 = 8.765</span>
+    <span class="define">REG_RTC_MR </span>|= <span class="define">RTC_MR_CORRECTION</span>(9);
+}
+</pre>
+
+<h3>Setting Time</h3>
+<p>To set the time, we set the bit to disable the rtc for date or time in the REG_RTC_CR register. Then we poll to make sure the clock has stopped and clear the ACKCLR bit in the SCCR register, update the time or date and then restart the rtc clock by clearing the CR_UPDTIM bit and setting the TIMCLR or CALCLR bit in the SCCR register.</p>
+
+<h3>Reading Time</h3>
+<p>To read the time, we just read the time and calendar registers return the 32bit variable and then we can decode the BCD values and display however we want.</p>
+<pre>
+<span class="var">uint32_t </span><span class="method">rtcGetTime</span> (){
+    <span class="var">uint32_t</span> time1=1;
+    <span class="var">uint32_t</span> time2=2;
+    <span class="comment">/*read reg_rtc_timr twice and compare
+    if it's the same then the data is good
+    otherwise read again twice until it matches
+    */</span>
+    <span class="flow">while </span>(!(time1==time2)){
+        time1 = <span class="define">REG_RTC_TIMR</span>;
+        time2 = <span class="define">REG_RTC_TIMR</span>;
+    }
+    <span class="flow">return</span> time2;
+}
+
+<span class="var">uint32_t </span><span class="method">rtcGetDate </span>(){
+    <span class="var">uint32_t </span>date1=1;
+    <span class="var">uint32_t </span>date2=2;
+    <span class="comment">/*read reg_rtc_calr twice and compare
+    if it's the same then the data is good
+    otherwise read again twice until it matches
+    */</span>
+    <span class="flow">while </span>(!(date1==date2)){
+        date1 = <span class="define">REG_RTC_CALR</span>;
+        date2 = <span class="define">REG_RTC_CALR</span>;
+    }
+    <span class="flow">return </span>date2;	
+}
+</pre>
+
+
+<h3>Example</h3>
+
+<pre>
+
+<span class="flow">#include </span><span class="method">"sam.h"</span>
+<span class="flow">#include </span><span class="method">"basic_uart.h"</span>
+
+<span class="var">void</span> <span class="method">clock_init</span>(){
+    <span class="define">REG_CKGR_MOR</span> |= <span class="define">CKGR_MOR_KEY_PASSWD</span> | <span class="define">CKGR_MOR_MOSCXTEN</span>;
+    <span class="flow">while</span> (!(<span class="define">REG_PMC_SR</span> & <span class="define">PMC_SR_MOSCXTS</span>));
+    <span class="define">REG_CKGR_MOR </span>|= <span class="define">CKGR_MOR_KEY_PASSWD </span>| <span class="define">CKGR_MOR_MOSCSEL</span>;
+    <span class="define">REG_PMC_MCKR </span>|= <span class="define">MC_MCKR_CSS_MAIN_CLK</span>;
+    <span class="flow">while </span>(!(<span class="define">REG_PMC_SR </span>& <span class="define">PMC_SR_MCKRDY</span>));
+    <span class="define">REG_PMC_MCKR </span>|= <span class="define">PMC_MCKR_PRES_CLK_1</span>;
+    <span class="flow">while</span> (!(<span class="define">REG_PMC_SR</span> & <span class="define">PMC_SR_MCKRDY</span>));
+}
+
+<span class="var">uint8_t</span><span class="method"> bcdToDecimal</span>(<span class="var">uint8_t</span> bcdByte){	
+    <span class="flow">return</span> ((((bcdByte & 0xF0) >> 4) * 10) + (bcdByte & 0x0F));	
+}
+
+<span class="var">uint8_t </span><span class="method">decimalToBCD</span>(<span class="var">uint8_t</span> decByte){	
+    <span class="flow">return</span> (((decByte/10) <<4) | (decByte%10));
+}
+<span class="comment">
+//cent		19-20(gregorian) / 13-14 (persian)
+//year		00-99
+//month		01-12
+//day		1-7
+//date		01-31
+</span>
+<span class="var">void</span><span class="method"> rtcSetDate</span>(<span class="var">uint8_t</span> date, <span class="var">uint8_t</span> day, <span class="var">uint8_t</span> month, <span class="var">uint8_t</span> year, <span class="var">uint8_t</span> cent){	
+    <span class="var">uint32_t</span> newDate = 0;
+	
+    <span class="comment">//convert input into BCD and pass values to register</span>
+    newDate |= <span class="define">RTC_CALR_DATE</span>(<span class="method">decimalToBCD</span>(date));
+    newDate |= <span class="define">RTC_CALR_DAY</span>(<span class="method">decimalToBCD</span>(day));
+    newDate |= <span class="define">RTC_CALR_MONTH</span>(<span class="method">decimalToBCD</span>(month));
+    newDate |= <span class="define">RTC_CALR_YEAR</span>(<span class="method">decimalToBCD</span>(year));
+    newDate |= <span class="define">RTC_CALR_CENT</span>(<span class="method">decimalToBCD</span>(cent));
+	
+    <span class="comment">//stop rtc calendar counting</span>
+    <span class="define">REG_RTC_CR </span>|= <span class="define">RTC_CR_UPDCAL</span>;
+    <span class="comment">//check that the calendar is stopped</span>
+    <span class="flow">while</span>(!(<span class="define">REG_RTC_SR</span> & <span class="define">RTC_SR_ACKUPD</span>));
+    <span class="comment">//clear ackupd</span>
+    <span class="define">REG_RTC_SCCR</span> |= <span class="define">RTC_SCCR_ACKCLR</span>;		
+    <span class="define">REG_RTC_CALR</span> = newDate;
+    <span class="comment">//clear updcal in control register</span>
+    <span class="define">REG_RTC_CR </span>&= ~<span class="define">RTC_CR_UPDCAL</span>;
+    <span class="comment">//start clock</span>
+    <span class="define">REG_RTC_SCCR</span> |= <span class="define">RTC_SCCR_CALCLR</span>;	
+}
+
+<span class="comment">//hour		1-12 in 12 hour mode / 1-23 in 24 hour mode</span>
+<span class="comment">//minute	0-59</span>
+<span class="comment">//second	0-59</span>
+
+<span class="var">void </span><span class="method">rtcSetTime</span>(<span class="var">uint8_t </span>hour, <span class="var">uint8_t </span>minute, <span class="var">uint8_t </span>second){
+    <span class="var">uint32_t </span>newTime = 0;
+	
+    <span class="comment">//convert input into BCD and pass values to register</span>
+    newTime |= <span class="define">RTC_TIMR_SEC</span>(<span class="method">decimalToBCD</span>(second));
+    newTime |= <span class="define">RTC_TIMR_HOUR</span>(<span class="method">decimalToBCD</span>(hour));
+    newTime |= <span class="define">RTC_TIMR_MIN</span>(<span class="method">decimalToBCD</span>(minute));
+    <span class="method">printWord </span>(newTime>>16);
+    <span class="method">printWord </span>(newTime);
+	
+    <span class="comment">//stop rtc time counting</span>
+    <span class="define">REG_RTC_CR </span>|= <span class="define">RTC_CR_UPDTIM</span>;
+    <span class="comment">//check that the time is stopped</span>
+    <span class="flow">while</span>(!(<span class="define">REG_RTC_SR</span> & <span class="define">RTC_SR_ACKUPD</span>));
+    <span class="comment">//clear ackupd</span>
+    <span class="define">REG_RTC_SCCR </span>|= <span class="define">RTC_SCCR_ACKCLR</span>;
+	
+    <span class="define">REG_RTC_TIMR</span> = newTime;
+    <span class="comment">//clear updtim in rtc_cr</span>
+    <span class="define">REG_RTC_CR </span>&= ~<span class="define">RTC_CR_UPDTIM</span>;
+    <span class="comment">//start clock</span>
+    <span class="define">REG_RTC_SCCR </span>|= <span class="define">RTC_SCCR_TIMCLR</span>;
+}
+
+<span class="var">void </span><span class="method">slowClock_init</span>(){	
+    <span class="comment">//slow clock setup</span>
+    <span class="comment">//switch from RC osc to external crystal, disable RC osc, disable PIO on xtal pins</span>
+    <span class="define">REG_SUPC_CR </span>|= <span class="define">SUPC_CR_XTALSEL </span>| <span class="define">SUPC_CR_KEY_PASSWD</span>;
+    <span class="comment">//read status register.oscsel bit and wait for slow clock to be selected</span>
+    <span class="flow">while </span>(!(<span class="define">REG_SUPC_SR </span>& <span class="define">SUPC_SR_OSCSEL</span>));
+	
+    <span class="comment">//set crystal correction</span>
+    <span class="define">REG_RTC_MR </span>&= ~<span class="define">RTC_MR_HIGHPPM</span>;
+    <span class="comment">//correction = (3906/20*ppm)-1 = 8.765</span>
+    <span class="define">REG_RTC_MR </span>|= <span class="define">RTC_MR_CORRECTION</span>(9);
+}
+
+<span class="var">uint32_t</span> <span class="method">rtcGetTime</span> (){	
+    <span class="var">uint32_t</span> time1=1;
+    <span class="var">uint32_t</span> time2=2;
+    <span class="comment">/*read reg_rtc_timr twice and compare</span>
+    <span class="comment">if it's the same then the data is good</span>
+    <span class="comment">otherwise read again twice until it matches
+    */</span>
+    <span class="flow">while</span> (!(time1==time2)){	
+        time1 = <span class="define">REG_RTC_TIMR</span>;
+        time2 = <span class="define">REG_RTC_TIMR</span>;	
+    }
+    <span class="flow">return </span>time2;	
+}
+
+<span class="var">uint32_t </span><span class="method">rtcGetDate </span>(){
+    <span class="var">uint32_t </span>date1=1;
+    <span class="var">uint32_t </span>date2=2;
+    <span class="comment">/*read reg_rtc_calr twice and compare
+    if it's the same then the data is good
+    otherwise read again twice until it matches
+    */</span>
+    <span class="flow">while </span>(!(date1==date2)){	
+        date1 = <span class="define">REG_RTC_CALR</span>;
+        date2 = <span class="define">REG_RTC_CALR</span>;
+    }
+    <span class="flow">return </span>date2;	
+}
+
+<span class="var">void </span><span class="method">printDate</span>(){
+    <span class="comment">//get calendar register data</span>
+    <span class="var">uint32_t </span>dateData = <span class="method">rtcGetDate</span>();
+    <span class="comment">//mask the bits and shift to the first byte</span>
+    <span class="var">uint8_t </span>month = (dateData & <span class="define">RTC_CALR_MONTH_Msk</span>) >> <span class="define">RTC_CALR_MONTH_Pos</span>;
+    <span class="var">uint8_t </span>date = (dateData & <span class="define">RTC_CALR_DATE_Msk</span>) >> <span class="define">RTC_CALR_DATE_Pos</span>;
+    <span class="var">uint8_t </span>day = (dateData & <span class="define">RTC_CALR_DAY_Msk</span>) >> <span class="define">RTC_CALR_DAY_Pos</span>;
+    <span class="var">uint8_t </span>year = (dateData & <span class="define">RTC_CALR_YEAR_Msk</span>) >> <span class="define">RTC_CALR_YEAR_Pos</span>;
+    <span class="var">uint8_t </span>cent = (dateData & <span class="define">RTC_CALR_CENT_Msk</span>) >> <span class="define">RTC_CALR_CENT_Pos</span>;
+    <span class="comment">//convert from bcd to decimal and format output</span>
+    <span class="method">printByte</span> (<span class="method">bcdToDecimal</span>(month));
+    <span class="method">printString</span> (" ");
+    <span class="method">printByte </span>(<span class="method">bcdToDecimal</span>(date));
+    <span class="method">printString</span>(", ");
+    <span class="method">printByte </span>(<span class="method">bcdToDecimal</span>(cent));
+    <span class="method">printByte </span>(<span class="method">bcdToDecimal</span>(year));
+    <span class="method">printString</span>("\r\n");	
+}
+
+<span class="var">void </span><span class="method">printTime</span>(){	
+    <span class="var">uint32_t </span>timeData = <span class="method">rtcGetTime</span>();
+	
+    <span class="var">uint8_t </span>hour = (timeData & <span class="define">RTC_TIMR_HOUR_Msk</span>) >><span class="define"> RTC_TIMR_HOUR_Pos</span>;
+    <span class="var">uint8_t </span>minute = (timeData & <span class="define">RTC_TIMR_MIN_Msk</span>) >><span class="define"> RTC_TIMR_MIN_Pos</span>;
+    <span class="var">uint8_t </span>second = (timeData & <span class="define">RTC_TIMR_SEC_Msk</span>) >><span class="define"> RTC_TIMR_SEC_Pos</span>;
+	
+    <span class="method">printByte </span>(<span class="method">bcdToDecimal</span>(hour));
+    <span class="method">printString</span>(":");
+    <span class="method">printByte </span>(<span class="method">bcdToDecimal</span>(minute));
+    <span class="method">printString</span>(":");
+    <span class="method">printByte </span>(<span class="method">bcdToDecimal</span>(second));
+    <span class="method">printString </span>("\r\n");	
+}
+
+<span class="var">int </span><span class="method">main</span>(<span class="var">void</span>)
+{    
+    <span class="method">SystemInit</span>();
+    <span class="method">clock_init</span>();
+    <span class="method">UART_Init</span>();
+    <span class="method">slowClock_init</span>();
+	
+    <span class="method">rtcSetDate</span>(13, 1,12,15,20);
+    <span class="method">rtcSetTime</span>(10,14,1);
+	    
+    <span class="flow">while </span>(1) 
+    {
+        <span class="method">printDate</span>();
+        <span class="method">printTime</span>();	
+    }	
+}
+</pre>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	</div>
+	<br>
+        
+</div>
+
+<footer class="container-fluid text-center">
+  <p> </p>
+</footer>
+
+
+</body>
+</html>

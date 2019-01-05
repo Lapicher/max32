@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>ATSAM4S Tutorial</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">          
+  <meta name="description" content="ATSAM4S TUTORIAL">
+  <meta name="keywords" content="No ASF, ARM, Atmel-ICE, ATSAM4S">
+  <meta name="author" content="Robert M">	
+  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="css.css">
+	<script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+          (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+          })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+          ga('create', 'UA-50914817-1', 'mwmw.ca');
+          ga('send', 'pageview');
+	</script>  
+</head>
+
+<body>
+
+
+
+<nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="http://www.mwmw.ca">mwmw.ca</a>
+    </div>
+    <ul class="nav navbar-nav">
+      <li class="active"><a href="index.html">Atsam4s Tutorial</a></li>      
+      <li><a href="projects.html">Projects</a></li> 
+      <li><a href="contact.html">Contact</a></li> 
+    </ul>
+  </div>
+</nav>
+
+<div class="container-fluid text-left">    
+  <div class="row content">
+    <div class="col-sm-2 sidenav">	
+	<ul class="nav nav-pills nav-stacked btn-md ">
+	<li ><a href="index.html" class="active">Getting Started</a></li>	
+	<li><a href='hardware.html' >Hardware</a></li>
+	<li><a href='programming.html' >Programming</a></li>
+	<li><a href='bootloader.html' >Boot Loader</a></li>
+	<li><a href='bittwiddling.html' >Bit Twiddling</a></li>
+	<li><a href='gpio.html' ><b>GPIO</b> - General Purpose Input/Output</a></li>
+	<li><a href='clock.html' ><b>PMC</b> - System Clock</a></li>
+	<li><a href='interrupts.html' ><b>INT</b> - Interrupts</a></li>
+	<li><a href='uart.html' ><b>UART</b> - Universal Asynchronous Receiver-Transmitter</a></li>	
+	<li><a href='timercounter.html' ><b>TC</b> - Timer/Counter Overflow Interrupt</a></li>
+	<li><a href='timercounterdelay.html' ><b>TC</b> - Timer/Counter Compare Interrupt</a></li>
+	<li class="active"><a href='i2c.html' ><b>I2C</b> - Inter-integrated Circuit</a></li>
+	<li><a href='spi.html' ><b>SPI</b> - Serial Peripheral Interface</a></li>
+	<li><a href='gpio-glcd.html' ><b>GPIO</b> - GLCD</a></li>
+	<li><a href='rtc.html' ><b>RTC</b> - Real Time Clock</a></li>
+	<li><a href='rtt.html' ><b>RTT</b> - Real Time Timer</a></li>
+	<li><a href='adc.html' ><b>ADC</b> - Analog Digital Converter</a></li>
+	<li><a href='dacc.html' ><b>DACC</b> - Digital Analog Converter</a></li>
+	<li><a href='sleep.html' ><b>SUPCC</b> - Sleep/Wake/Power Saving</a></li>
+	<li><a href='qdec.html' ><b>QDEC</b> - Quadrature Signal Decoder</a></li>
+	<li><a href='pwm.html' ><b>PWM</b> - Pulse Width Modulation</a></li>
+	<li><a href='debugging.html' >Debugging</a></li>
+	</ul>
+    </div>
+	
+    <div class="col-sm-8 text-left"> 	
+		<h2>I2C</h2>		
+<p>In this Example, we will implement a single master setup with the ATSAM4S as the master and an <a href='http://www.atmel.com/images/atmel-8854-dts-at30tse752a-754a-758a-datasheet.pdf' class='blink'>AT30TSE752A temperature sensor</a> as the slave.</p>
+<h3>Prerequisites</h3>
+<p>The master clock needs to be set before we enable the i2c peripheral clock.  You will need pull up resistors on the i2c (TWI) pins, TWD and TWCK.  On the dev board we have 4.7k pull up resistors on the TWI0 peripheral, but not the TWI1.  In this example we will use TWI0.</p>
+
+<h3>Setup</h3>
+<p>I won't focus too much on how i2c works because there are lots of tutorials out there.  It's a great protocol when you want to connect several devices to a microcontroller and use the least amount of pins possible, which is two. TWD and TWCK - data and clock respectively.  Here is an i2c block diagram from the ATSAM4S datasheet:</p>
+<a href='images/i2c.jpg'><img src='images/i2c_small.jpg' style="border:1px solid #aaaaaa"></a><br><br>  Of course, in this example we are only putting a single device on the bus.<br><br> 
+<a href='images/i2cbreadboard.jpg'><img src='images/i2cbreadboard_small.jpg' style="border:1px solid #aaaaaa"></a><br><br>
+Here is a great tutorial on i2c: <a href='https://learn.sparkfun.com/tutorials/i2c' class='blink'>Sparkfun i2c tutorial</a><br><br>
+
+To setup TWI0 we will need to do the following:
+<ol>
+<li>Enable the peripheral clock in the PMC
+<li>Disable the PIO controller on the pins to enable peripheral control
+<li>Before we enable TWI master mode, we need to enter the slave address, set the clock waveform, disable slave mode.
+<li>Enable TWI master mode
+<li>We need to find the slave address of the temperature sensor AT30TSE752A
+</ol>
+</span><br>
+
+<span class='text-danger'>*note*</span> Above it mentions the slave address needs to be set before master mode is enabled.  If you want to change communication to a different device you can change the address without disabling master mode.<br><br>
+
+This temperature sensor contains three i2c addresses.  Usually a single chip will only contain a single address.  Here is a table of the addresses and function.<br><br>
+<img src='images/at30tse752a_address.jpg'><br><br>
+If we ground pins A0, A1, A2 on the temperature sensor then they all become 0.  Conversely if we raise them to Vcc then they will be 1. In our example we will ground them all.  Our addresses will be:<br><br>
+Temperature Sensor: 0b1001000 + read/write bit<br>
+Serial EEPROM: 0b1010000 + read/write bit<br>
+Software write protection: 0b0110000 + read/write bit<br><br>
+<p><span class='redtext'>*Note* </span> Although the program flow for i2c is similar with AVR, Xmega and Atsam4s, there is one big difference in the order that registers get set.  For the Atsam4s, it expects you to set the stop bit in the control register before you send the last read or write.  If you don't set the stop bit, the Atsam4s will send an ACK instead of NACK on the last read.</p>
+
+
+<h3>Example</h3>
+
+<pre>
+<span class="flow">#include</span><span class="method"> "sam.h"</span>
+<span class="flow">#include</span><span class="method"> "basic_uart.h"</span>
+
+<span class="define">#define read</span>	1
+<span class="define">#define write</span>	0
+
+<span class="define">#define AT30TSE752A_temperatureAddress	</span>		0b1001000 (7bits)
+<span class="define">#define AT30TSE752A_temperatureRegister</span>			0b00000000
+<span class="define">#define AT30TSE752A_temperatureConfigurationRegister</span>	0b00000001
+<span class="define">#define AT30TSE752A_temperatureTlow</span>			0b00000010
+<span class="define">#define AT30TSE752A_temperatureThigh</span>			0b00000011
+<span class="define">#define AT30TSE752A_nonvolatileconfigregister</span>		0x11
+
+<span class="define">#define AT30TSE752A_eepromAddress</span>			0b1010000 (7bits)
+
+<span class="var">void</span> <span class="method">clock_init</span>(){
+    <span class="define">REG_CKGR_MOR</span> |= <span class="define">CKGR_MOR_KEY_PASSWD</span> | <span class="define">CKGR_MOR_MOSCXTEN</span>;
+    <span class="flow">while</span> (!(<span class="define">REG_PMC_SR</span> & <span class="define">PMC_SR_MOSCXTS</span>));
+    <span class="define">REG_CKGR_MOR </span>|= <span class="define">CKGR_MOR_KEY_PASSWD </span>| <span class="define">CKGR_MOR_MOSCSEL</span>;
+    <span class="define">REG_PMC_MCKR </span>|= <span class="define">MC_MCKR_CSS_MAIN_CLK</span>;
+    <span class="flow">while </span>(!(<span class="define">REG_PMC_SR </span>& <span class="define">PMC_SR_MCKRDY</span>));
+    <span class="define">REG_PMC_MCKR </span>|= <span class="define">PMC_MCKR_PRES_CLK_1</span>;
+    <span class="flow">while</span> (!(<span class="define">REG_PMC_SR</span> & <span class="define">PMC_SR_MCKRDY</span>));
+}
+
+<span class="var">void </span><span class="method">i2c_init</span>(){
+    <span class="comment">//enable i2c peripheral in PMC</span>
+    <span class="define">REG_PMC_PCER0</span> |= <span class="define">PMC_PCER0_PID19</span>;
+	
+    <span class="comment">//disable PIO control of pins to enable peripheral control</span>
+    <span class="define">REG_PIOA_PDR</span> |= <span class="define">PIO_PDR_P3</span>;
+    <span class="define">REG_PIOA_PDR</span> |= <span class="define">PIO_PDR_P4</span>;
+	
+    <span class="comment">//write direction - not really needed for setup</span>
+    <span class="define">REG_TWI0_MMR</span> &= ~<span class="define">TWI_MMR_MREAD</span>; //0=write, 1=read
+	
+    <span class="comment">//enter slave address</span>
+    <span class="define">REG_TWI0_MMR</span> |= <span class="define">TWI_MMR_DADR</span>(0b1001000);
+    <span class="comment">
+    /*from twi.h
+    #define TWI_MMR_DADR_Pos 16
+    #define TWI_MMR_DADR_Msk (0x7fu << TWI_MMR_DADR_Pos)
+    #define TWI_MMR_DADR(value) ((TWI_MMR_DADR_Msk & ((value) << TWI_MMR_DADR_Pos)))
+    */</span>
+			
+    <span class="comment">//clockwave form 100khz - 196, 400khz - 46, when fperipheral is 20MHz</span>
+    <span class="define">REG_TWI0_CWGR</span> |= <span class="define">TWI_CWGR_CLDIV</span>(196);
+    <span class="define">REG_TWI0_CWGR</span> |= <span class="define">TWI_CWGR_CHDIV</span>(196);
+    <span class="comment">//formula tlow = ((CLDIV x 2^CKDIV)+4)xTper;</span>
+    <span class="comment">//1/100,000 = ((CLDIV x 2^0)+4)x1/20,000,000;</span>
+	
+    <span class="comment">//disable slave mode</span>
+    <span class="define">REG_TWI0_CR</span> |= <span class="define">TWI_CR_SVDIS</span>;
+    <span class="comment">//enable master mode</span>
+    <span class="define">REG_TWI0_CR</span> |= <span class="define">TWI_CR_MSEN</span>;	
+}
+
+<span class="var">void</span> <span class="method">i2c_stop</span>(){
+    <span class="define">REG_TWI0_CR </span>|= <span class="define">TWI_CR_STOP</span>;	
+}
+
+<span class="var">void</span> <span class="method">i2c_start</span>(<span class="var">uint8_t</span> slave_address, <span class="var">uint8_t</span> mread){ <span class="comment">//read=1, write=0</span>
+    <span class="comment">//set slave address</span>
+    <span class="define">REG_TWI0_MMR </span>|= <span class="define">TWI_MMR_DADR</span>(slave_address);
+    <span class="comment">//set read/write direction</span>
+    <span class="flow">if</span> (mread == write){ <span class="comment">//write</span>
+        <span class="define">REG_TWI0_MMR</span> &= ~<span class="define">TWI_MMR_MREAD</span>;
+    }
+    <span class="flow">else if </span>(mread == read){ <span class="comment">//read</span>
+        <span class="define">REG_TWI0_MMR</span> |= <span class="define">TWI_MMR_MREAD</span>;
+    }
+    <span class="comment">//send start</span>
+    <span class="define">REG_TWI0_CR</span> |= <span class="define">TWI_CR_START</span>;
+}
+
+<span class="var">uint8_t </span><span class="define">i2c_readACK</span>(){	
+    <span class="var">uint8_t</span> receiveByte;
+    <span class="comment">//if the stop bit in the control register is not set, ATSAM4S will automatically ACK after reading TWIn_RHR register</span>
+    <span class="comment">//RXRDY will be set when data arrives in TWIn_RHR register</span>
+    <span class="flow">while</span>(!(<span class="define">REG_TWI0_SR </span>& <span class="define">TWI_SR_RXRDY</span>));
+    <span class="comment">//reading data will clear RXRDY bit in the status register</span>
+    receiveByte = <span class="define">REG_TWI0_RHR</span>;
+    <span class="flow">return</span> receiveByte;
+}
+
+<span class="var">uint8_t</span> <span class="method">i2c_readNACK</span>(){
+    <span class="var">uint8_t</span> receiveByte;
+    <span class="comment">//ATSAM4S requires stop bit to be set before data is set on the TWIn_RHR</span>
+    <span class="comment">//when stop bit is set ATSAM4S will send a NACK instead of an ACK automatically</span>
+    <span class="method">i2c_stop</span>();
+    <span class="comment">//When data arrives in the TWIn_RHR register RXRDY is set in the Status Register</span>
+    <span class="flow">while</span>(!(<span class="define">REG_TWI0_SR </span>& <span class="define">TWI_SR_RXRDY</span>));
+    <span class="comment">//reading the byte of data will set RXRDY to 0</span>
+    receiveByte = <span class="define">REG_TWI0_RHR</span>;
+    <span class="flow">while</span>(!(<span class="define">REG_TWI0_SR</span> & <span class="define">TWI_SR_TXCOMP</span>));
+    <span class="flow">return</span> receiveByte;
+}
+
+<span class="var">void </span><span class="method">i2c_writeLastByte</span>(<span class="var">uint8_t</span> data){
+    <span class="comment">//write data or slave register to THR</span>
+    <span class="define">REG_TWI0_THR </span>|= data;
+    <span class="comment">//ATSAM4S requires stop bit to be set before data is written to TWIn_THR register</span>
+    <span class="method">i2c_stop</span>();
+    <span class="comment">//wait for ack</span>
+    <span class="flow">while</span>(!(<span class="define">REG_TWI0_SR</span> & <span class="define">TWI_SR_TXRDY</span>));
+    <span class="flow">while</span>(!(<span class="define">REG_TWI0_SR</span> & <span class="define">TWI_SR_TXCOMP</span>));	
+}
+
+<span class="var">void</span> <span class="method">i2c_write</span>(<span class="var">uint8_t</span> data){
+    <span class="comment">//write data or slave register to THR</span>
+    <span class="define">REG_TWI0_THR </span>|= data;
+    <span class="comment">//wait for ack</span>
+    <span class="flow">while</span>(!(<span class="define">REG_TWI0_SR </span>& <span class="define">TWI_SR_TXRDY</span>));	
+}
+
+<span class="var">int</span><span class="method"> main</span>(<span class="var">void</span>)
+{
+    <span class="comment">/* Initialize the SAM system */</span>
+    <span class="method">SystemInit</span>();
+    <span class="method">clock_init</span>();
+    <span class="method">UART_Init</span>();
+    <span class="method">i2c_init</span>();
+		
+    <span class="var">uint8_t</span> config;
+    <span class="comment">//configure 11bits of data resolution</span>
+    <span class="comment">//start communication with the temperature sensor</span>
+    <span class="method">i2c_start</span>(AT30TSE752A_temperatureAddress,write);
+    <span class="comment">//point to the configuration register</span>
+    <span class="method">i2c_write</span>(AT30TSE752A_temperatureConfigurationRegister);
+    <span class="comment">//send byte to configuration register</span>
+    <span class="method">i2c_writeLastByte</span>(0b01000000);
+	
+    <span class="comment">//start communication with the temperature sensor</span>
+    <span class="method">i2c_start</span>(AT30TSE752A_temperatureAddress,write);
+    <span class="comment">//set pointer to the configuration register</span>
+    <span class="method">i2c_writeLastByte</span>(AT30TSE752A_temperatureConfigurationRegister);
+    <span class="comment">//restart</span>
+    <span class="method">i2c_start</span>(AT30TSE752A_temperatureAddress,read);
+    <span class="comment">//read configuration register and write byte to UART</span>
+    config = <span class="method">i2c_readNACK</span>();
+    <span class="method">printString</span>("configuration: ");
+    <span class="method">printBinaryByte</span>(config);
+    <span class="method">printString</span>("\r\n");
+	
+    <span class="var">uint16_t</span> temperatureMSB;
+    <span class="var">uint16_t </span>temperatureLSB;
+    <span class="var">uint16_t </span>temperatureFraction=0;
+	
+    <span class="flow">while </span>(1) 
+    {		
+        <span class="comment">//start i2c</span>
+        <span class="method">i2c_start</span>(AT30TSE752A_temperatureAddress,0);
+        <span class="comment">//write the register we want to read from	</span>
+        <span class="method">i2c_writeLastByte</span>(AT30TSE752A_temperatureRegister);
+		
+        <span class="comment">//restart i2c</span>
+        <span class="method">i2c_start</span>(AT30TSE752A_temperatureAddress,1);
+        <span class="comment">//read the first byte</span>
+        temperatureMSB = <span class="method">i2c_readACK</span>();
+        <span class="comment">//read the second and last byte</span>
+        temperatureLSB = <span class="method">i2c_readNACK</span>();
+
+        <span class="comment">
+        //16 bits of temperature data
+        /*	bit 15	14	13	12	11	10	9	8	7	6	5	4	3	2	1
+		    +-	{temperature whole number} {fraction     } {nothing  }
+        */</span>
+        <span class="comment">//Write the temperature to UART</span>
+        <span class="comment">//sign</span>
+        <span class="flow">if </span>((temperatureMSB & 0b10000000)>0){
+            <span class="method">printString</span>("-");
+        }
+        <span class="comment">//use mask to not include first bit in temperature since it's the sign bit</span>
+        <span class="method">printByte</span>(0b01111111 & temperatureMSB);
+        <span class="method">printString</span>(".");
+
+        temperatureFraction += (500*((0b10000000 & temperatureLSB)>>7));
+        temperatureFraction += (250*((0b01000000 & temperatureLSB)>>6));
+        temperatureFraction += (125*((0b00100000 & temperatureLSB)>>5));
+		
+        <span class="method">transmitByte</span>('0' + ((temperatureFraction / 100) % 10));
+        <span class="method">transmitByte</span>('0' + ((temperatureFraction / 10) % 10)); 
+        <span class="method">transmitByte</span>('0' + (temperatureFraction % 10));        
+        <span class="method">printString</span>("\r\n");
+        temperatureFraction = 0;
+    }
+}
+</pre>		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	</div>
+	<br>
+        
+</div>
+
+<footer class="container-fluid text-center">
+  <p> </p>
+</footer>
+
+
+</body>
+</html>

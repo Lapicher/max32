@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>ATSAM4S UART</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">          
+  <meta name="description" content="ATSAM4S TUTORIAL">
+  <meta name="keywords" content="No ASF, ARM, Atmel-ICE, ATSAM4S">
+  <meta name="author" content="Robert M">	
+  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="css.css">
+	<script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+          (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+          })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+          ga('create', 'UA-50914817-1', 'mwmw.ca');
+          ga('send', 'pageview');
+	</script>  
+</head>
+
+<body>
+
+
+
+<nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="http://www.mwmw.ca">mwmw.ca</a>
+    </div>
+    <ul class="nav navbar-nav">
+      <li class="active"><a href="index.html">Atsam4s Tutorial</a></li>      
+      <li><a href="projects.html">Projects</a></li> 
+      <li><a href="contact.html">Contact</a></li> 
+    </ul>
+  </div>
+</nav>
+
+<div class="container-fluid text-left">    
+  <div class="row content">
+    <div class="col-sm-2 sidenav">	
+	<ul class="nav nav-pills nav-stacked btn-md ">
+	<li ><a href="index.html" class="active">Getting Started</a></li>	
+	<li><a href='hardware.html' >Hardware</a></li>
+	<li><a href='programming.html' >Programming</a></li>
+	<li><a href='bootloader.html' >Boot Loader</a></li>
+	<li><a href='bittwiddling.html' >Bit Twiddling</a></li>
+	<li><a href='gpio.html' ><b>GPIO</b> - General Purpose Input/Output</a></li>
+	<li><a href='clock.html' ><b>PMC</b> - System Clock</a></li>
+	<li><a href='interrupts.html' ><b>INT</b> - Interrupts</a></li>
+	<li class="active"><a href='uart.html' ><b>UART</b> - Universal Asynchronous Receiver-Transmitter</a></li>	
+	<li><a href='timercounter.html' ><b>TC</b> - Timer/Counter Overflow Interrupt</a></li>
+	<li><a href='timercounterdelay.html' ><b>TC</b> - Timer/Counter Compare Interrupt</a></li>
+	<li><a href='i2c.html' ><b>I2C</b> - Inter-integrated Circuit</a></li>
+	<li><a href='spi.html' ><b>SPI</b> - Serial Peripheral Interface</a></li>
+	<li><a href='gpio-glcd.html' ><b>GPIO</b> - GLCD</a></li>
+	<li><a href='rtc.html' ><b>RTC</b> - Real Time Clock</a></li>
+	<li><a href='rtt.html' ><b>RTT</b> - Real Time Timer</a></li>
+	<li><a href='adc.html' ><b>ADC</b> - Analog Digital Converter</a></li>
+	<li><a href='dacc.html' ><b>DACC</b> - Digital Analog Converter</a></li>
+	<li><a href='sleep.html' ><b>SUPCC</b> - Sleep/Wake/Power Saving</a></li>
+	<li><a href='qdec.html' ><b>QDEC</b> - Quadrature Signal Decoder</a></li>
+	<li><a href='pwm.html' ><b>PWM</b> - Pulse Width Modulation</a></li>
+	<li><a href='debugging.html' >Debugging</a></li>
+	</ul>
+    </div>
+	
+    <div class="col-sm-8 text-left"> 	
+		<h2>UART: Universal Asynchronous Receiver Transmiter</h2>
+		
+		
+		
+<p>The UART peripheral provides an easy way for microcontrollers to communicate or even from a microcontroller to a computer.</p>
+
+<h3>Prerequisites</h3>
+
+<ul>
+	<li>The system master clock must be set before enabling the peripheral clock
+	<li>The PIO controller must be disabled on the UART pins
+</ul>
+
+
+<h3>Setup</h3>
+<p>To setup UART we must do the following:</p>
+<ol>
+	<li>Select the system master clock
+	<li>Disable parallel input/output (PIO) control of UART pins and set peripheral (A or B)
+	<li>Enable UART clock in the power management controller (PMC)
+	<li>Configure UART settings like Baud rate, parity, stop bits, etc
+	<li>Enable the transmitter and receiver 
+	<li>Setup interrupt for receiving bits
+</ol>
+
+<p>1. From our previous clock section we learned how to choose our main clock, set it up and select it as the system master clock, which is the clock for this peripheral. We will run the function that we created before to set the clock.</p>
+<pre><span class="method">clock_init</span>();</pre>
+
+<p>2. Disable the PIO control of the pins that will be used for UART.  On the ATSAM4S16B we have two UARTs - check the datasheet (11.2) for PIO and peripherals.  UART0 is PA9 and PA10 and UART1 is PB2 and PB3 and they are both under peripheral A.  We will choose UART0 for this example.  We need to disable PIO on pins PA9 and PA10 and select peripheral A for these pins then UART0 will be able to control the io on these pins.</p>
+<pre>
+<span class="comment">//disable PIOA control of PA9 and enable peripheral on pins PA9 and PA10</span>
+<span class="define">REG_PIOA_PDR </span>|= <span class="define">PIO_PDR_P9</span>;
+<span class="define">REG_PIOA_PDR </span>|= <span class="define">PIO_PDR_P10</span>;
+<span class="comment">//Select peripheral A</span>
+<span class="define">REG_PIOA_ABCDSR </span>&=  ~(<span class="define">PIO_ABCDSR_P9</span>); 
+<span class="define">REG_PIOA_ABCDSR </span>&=  ~(<span class="define">PIO_ABCDSR_P10</span>);
+</pre>
+<p>3. Enable the UART0 clock in the PMC</p>
+<pre>
+<span class="comment">//configure PMC UART Clock</span>
+<span class="comment">//enable UART0 clock</span>
+<span class="define">REG_PMC_PCER0</span> |= <span class="define">PMC_PCER0_PID8</span>; 
+</pre>
+<p>4. We are going to set the UART0 settings to 9600 BAUD, no parity and normal mode.  We will need to calculate the value in the BAUD rate register based on our peripheral clock speed.  The formula for calculating CD in the BAUD rate generator register REG_UART0_BRGR is:</p>
+<pre>
+CD = frequency of the peripheral clock / (16 x Desired Baud Rate)
+Our peripheral clock is based on the master clock which is running at 20 MHz.  Plugging in the values we get:
+CD = 20,000,000 / (16 x 9600)
+CD = 130 
+</pre>
+<pre>
+<span class="comment">//fper/16xBR 20,000,000/(16x9600)</span>
+<span class="define">REG_UART0_BRGR</span> |= 130;
+			
+<span class="comment">//parity</span>
+<span class="define">REG_UART0_MR </span>|= <span class="define">UART_MR_PAR_NO</span>;
+	
+<span class="comment">//normal mode is default
+//the register is REG_UART0_MR and CHMODE bits</span>
+	
+<span class="comment">//stop bit is 1 - unchangeable.  Use USART if you want to change this</span>
+</pre>
+<p>5. Enable the transmitter and receiver</p>
+<pre>
+<span class="comment">//enable transmit/receive</span>
+<span class="define">REG_UART0_CR </span>|= <span class="define">UART_CR_TXEN;</span>
+<span class="define">REG_UART0_CR </span>|= <span class="define">UART_CR_RXEN;</span>
+</pre>
+<p>6. Setup interrupt for receiving a bit over UART0 so that we don't have to poll for receiving a bit.  We need to do the following:</p>
+<ul>
+	<li> Enable UART0 interrupt in the NVIC
+	<li> Enable interrupt for receiving in UART0 interrupt enable register
+	<li> write our handler function on what to do when an interrupt is triggered
+</ul>
+
+<pre>
+<span class="comment">//Enable UART0 interrupts in NVIC</span>
+<span class="method">NVIC_EnableIRQ</span>(<span class="define">UART0_IRQn</span>);
+</pre>
+
+<pre>
+<span class="comment">//Trigger interrupt when receive a bit</span>
+<span class="define">REG_UART0_IER</span> |= <span class="define">UART_IER_RXRDY</span>;<br>
+</pre>
+
+<pre>
+<span class="comment">//write our handler function</span>
+<span class="var">void</span> <span class="method">UART0_Handler</span>(<span class="var">void</span>) {
+	<span class="comment">// code to run when interrupt triggered</span>
+}
+</pre>
+
+<p>To transmit a byte we simply put our byte to be transferred  into the REG_UART0_THR Register and to receive a byte we read the REG_UART0_RHR register.  Reading the register should clear the interrupt flag.</p>
+
+
+<h3>Example</h3>
+
+<pre>
+<span class="flow">#include </span><span class="method">"sam.h"</span>
+
+<span class="var">void</span> <span class="method">clock_init()</span>{
+    <span class="comment">//enable external crystal</span>
+    <span class="define">REG_CKGR_MOR</span> |= <span class="define">CKGR_MOR_KEY_PASSWD</span> | <span class="define">CKGR_MOR_MOSCXTEN</span>;
+    <span class="comment">//wait for crystal to become ready</span>
+    <span class="flow">while</span> (!(<span class="define">REG_PMC_SR</span> & <span class="define">PMC_SR_MOSCXTS</span></span>));
+    <span class="comment">//select crystal</span>
+    <span class="define">REG_CKGR_MOR</span> |= <span class="define">CKGR_MOR_KEY_PASSWD</span> | <span class="define">CKGR_MOR_MOSCSEL</span>;
+    <span class="comment">//master clock source selection - choose main clock</span>
+    <span class="define">REG_PMC_MCKR </span>|= <span class="define">PMC_MCKR_CSS_MAIN_CLK</span>
+    <span class="comment">//wait until main clock ready</span>
+    <span class="flow">while</span> (!(<span class="define">REG_PMC_SR</span> & <span class="define">PMC_SR_MCKRDY</span>)); 
+    <span class="comment">//select processer prescaler (0 - no divisor)</span>
+    <span class="define">REG_PMC_MCKR </span>|= <span class="define">PMC_MCKR_PRES_CLK_1</span>; 
+    <span class="comment">//wait until main clock ready</span>
+    <span class="flow">while</span> (!(<span class="define">REG_PMC_SR </span>& <span class="define">PMC_SR_MCKRDY</span>);
+}
+
+<span class="var">void </span><span class="method">UART_Init</span>(){
+    <span class="comment">//configure PIO controller A  - disable means enable peripheral on pins</span>
+    <span class="comment">//disable PIOA control of PA9 and enable peripheral on pin</span>
+    <span class="define">REG_PIOA_PDR </span>|= <span class="define">PIO_PDR_P9;</span>
+    <span class="comment">//disable PIOA control of PA9 and enable peripheral on pin</span>
+    <span class="define">REG_PIOA_PDR </span>|= <span class="define">PIO_PDR_P10</span>;
+    <span class="define">REG_PIOA_ABCDSR </span>&=  ~(<span class="define">PIO_ABCDSR_P9</span>);
+    <span class="define">REG_PIOA_ABCDSR</span> &=  ~(<span class="define">PIO_ABCDSR_P10</span>);
+		
+    <span class="comment">//configure PMC UART Clock</span>
+    <span class="comment">//enable UART0 clock</span>
+    <span class="define">REG_PMC_PCER0 </span>|= <span class="define">PMC_PCER0_PID8</span>;
+		
+    <span class="comment">//configure buad rate</span>
+    <span class="define">REG_UART0_BRGR </span>|= 130;
+    <span class="comment">//fcpu/16xBR 20,000,000/(16x9600)</span>
+		
+    <span class="comment">//parity</span>
+    <span class="define">REG_UART0_MR </span>|= <span class="define">UART_MR_PAR_NO</span>;
+		
+    <span class="comment">//mode</span>
+    <span class="comment">//normal mode default</span>
+	
+    <span class="comment">//enable transmit/receive</span>
+    <span class="define">REG_UART0_CR </span>|= <span class="define">UART_CR_TXEN</span>;
+    <span class="define">REG_UART0_CR </span>|= <span class="define">UART_CR_RXEN</span>;
+	
+    <span class="comment">//enable interrupt on receive</span>
+    <span class="define">REG_UART0_IER </span>|= <span class="define">UART_IER_RXRDY</span>;	
+}
+
+<span class="var">void</span> <span class="method">transmitByte</span>(<span class="var">uint8_t</span> data){
+	<span class="comment">//wait for ready</span>
+	<span class="flow">while</span> (!(<span class="define">REG_UART0_SR</span> & <span class="define">UART_SR_TXRDY</span>));
+	<span class="flow">while </span>(!(<span class="define">REG_UART0_SR</span> & <span class="define">UART_SR_TXEMPTY</span>));
+	<span class="define">REG_UART0_THR </span>|= data;	
+}
+
+<span class="var">void </span><span class="method">printString</span>(<span class="var">const char</span> myString[]) {
+    <span class="var">uint8_t</span> i = 0;
+    <span class="flow">while</span> (myString[i]) {
+        <span class="method">transmitByte</span>(myString[i]);
+        i++;
+    }
+}
+
+<span class="var">int</span><span class="method"> main</span>(<span class="var">void</span>)
+{
+    <span class="comment">/* Initialize the SAM system */</span>
+    <span class="method">SystemInit</span>();
+    <span class="method">clock_init</span>();
+    <span class="method">UART_Init</span>();
+    <span class="method">NVIC_EnableIRQ</span>(<span class="define">UART0_IRQn</span>);
+		
+    <span class="method">printString</span>("Waiting for input\r\n");
+    <span class="flow">while </span>(1)
+    {		
+        <span class="comment">//do nothing while waiting for interrupts to trigger</span>
+    }
+}
+
+<span class="var">void</span><span class="method"> UART0_Handler</span>(<span class="var">void</span>) {
+    <span class="comment">// when we receive a byte, transmit that byte back</span>
+    <span class="var">uint32_t</span> status = <span class="define">REG_UART0_SR</span>;
+    <span class="flow">if</span> ((status & <span class="define">UART_SR_RXRDY</span>)){
+        <span class="comment">//read receive holding register</span>
+        <span class="var">uint8_t</span> readByte = <span class="define">REG_UART0_RHR</span>;
+        <span class="comment">//transmit that byte back</span>
+        <span class="method">transmitByte</span>(readByte);
+    }
+}
+</pre>
+
+
+<p>We can connect a computer to our dev board by using an FTDI ttl to usb converter cable (<a href='http://www.ftdichip.com/Support/Documents/DataSheets/Cables/DS_TTL-232R_CABLES.pdf' class='blink'>TTL-232R-3V3</a>).  Download <a href='http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html' class='blink'>putty term</a>.<br><br>
+After you plug in your cable, the drivers will install automatically.  Open up device manager by pressing <kbd>Windows key + r</kbd>, type devmgmr.msc and press enter.  Check your device manager to find what COM port it is.  </p>
+<a href='images/devicemanager.jpg'><img src='images/devicemanager_small.jpg' style='border:1px solid #aaaaaa'></a><br><br>
+Open up putty and change the com port to match what is in the device manager.  Click on serial in the menu and make sure your options are the same as the settings in your C program.<br><br>
+<a href='images/putty1.jpg'><img src='images/putty1_small.jpg' style='border:1px solid #aaaaaa'></a>
+<a href='images/putty2.jpg'> <img src='images/putty2_small.jpg' style='border:1px solid #aaaaaa'></a><br>
+
+</span><br><br>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	</div>
+	<br>
+        
+</div>
+
+<footer class="container-fluid text-center">
+  <p> </p>
+</footer>
+
+
+</body>
+</html>

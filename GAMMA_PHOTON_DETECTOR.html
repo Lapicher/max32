@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>ATSAM4S Tutorial</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">          
+  <meta name="description" content="ATSAM4S TUTORIAL">
+  <meta name="keywords" content="No ASF, ARM, Atmel-ICE, ATSAM4S">
+  <meta name="author" content="Robert M">	
+  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="css.css">
+	<script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+          (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+          })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+          ga('create', 'UA-50914817-1', 'mwmw.ca');
+          ga('send', 'pageview');
+	</script>  
+</head>
+
+<body>
+
+
+
+<nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="http://www.mwmw.ca">mwmw.ca</a>
+    </div>
+    <ul class="nav navbar-nav">
+      <li><a href="index.html">Atsam4s Tutorial</a></li>      
+      <li class="active"><a href="projects.html">Projects</a></li> 
+      <li><a href="contact.html">Contact</a></li> 
+    </ul>
+  </div>
+</nav>
+
+<div class="container-fluid text-left">    
+  <div class="row content">
+    <div class="col-sm-2 sidenav">	
+	<ul class="nav nav-pills nav-stacked btn-md ">	
+	<li><a href='thermalcamera.html' >Flir Thermal Camera</a></li>	
+	<li class="active"><a href='GAMMA_PHOTON_DETECTOR.html' >Gamma-Photon Detector</a></li>
+	<li ><a href='NHD-C12832A1Z-FSW-FBW-3V3.html' >Newhaven LCD Module</a></li>
+	<li><a href='WEATHER.html' >Weather Station</a></li>	
+	</ul>	
+    </div>
+	
+    <div class="col-sm-8 text-left"> 	
+		<h2>Gamma Photon Detector</h2>
+		<h3>Description</h3>
+		<p>This project is based on a <a href="https://www.maximintegrated.com/en/app-notes/index.mvp/id/2236">Maxim Integrated app note</a>.  This circuit uses a photodiode to detect gamma photons.  When a gamma photon strikes the photodiode the signal is amplified by several low noise op amps and the final signal is fed to a comparator that pulses high at a certain threshold.  I won't go into the details about how it works - read the app note and do a google search.  There are many projects on the internet that use this identical circuit.  Instead, I will focus on how to interface this circuit with the SAM4S Arm Microcontroller.  I have prepared two PCBs for this project.  The first is just the circuit on its own to make sure it works and the second is the same circuit, but with a different photodiode and the SAM4S on the same board.  The PCB's hole placement was designed to put into this <a href="https://www.digikey.ca/product-detail/en/serpac/110IBK/SR110-IB-ND/95415">hand held enclosure.</a>  An LCD screen will be mounted on the enclosure to display a graph of the data as well as a count per second.</p>
+		<p>I will make the boards and BOM available as well as the fully populated boards available when finished.</p>
+		<h3>Pictures</h3>
+		<!-- Images -->
+		<div id="myCarousel" class="carousel slide" data-ride="carousel" style="width:600px;" >
+			<!-- Indicators -->
+			<ol class="carousel-indicators">
+				<li data-target="#myCarousel" data-slide-to="0" class="active"></li>
+				<li data-target="#myCarousel" data-slide-to="1"></li>
+				<li data-target="#myCarousel" data-slide-to="2"></li>
+				
+			</ol>
+
+			<!-- Wrapper for slides -->
+			<div class="carousel-inner" >
+				<div class="item active">
+					<img src='projects/gamma/images/gamma1.jpg' alt="Blank PCB Front" style="width:100%;">
+				</div>
+				<div class="item">
+					<img src='projects/gamma/images/gamma2.jpg' alt="Blank PCB Back" style="width:100%;">
+				</div>
+				<div class="item">
+					<img src='projects/gamma/images/gamma3.jpg' alt="Detector Only" style="width:100%;">
+				</div>
+				
+			</div>
+
+			<!-- Left and right controls -->
+				<a class="left carousel-control" href="#myCarousel" data-slide="prev">
+				<span class="glyphicon glyphicon-chevron-left"></span>
+				<span class="sr-only">Previous</span>
+				</a>
+				<a class="right carousel-control" href="#myCarousel" data-slide="next">
+				<span class="glyphicon glyphicon-chevron-right"></span>
+				<span class="sr-only">Next</span>
+				</a>
+		</div>
+		
+		<!-- Block Diagram -->
+		<h3>Block Diagram</h3>
+		<p><img src='projects/gamma/images/BlockDiagram.jpg' class="img-responsive"></p>
+		<h3>Software Flow</h3>
+		<p><img src='projects/gamma/images/SoftwareFlow.jpg' class="img-responsive"></p>
+		<h3>Schematic</h3>
+		<p>
+			<a href="projects/gamma/Schematic.pdf">Download PDF</a>	
+				Note: There is a mistake in this schematic.  I need to condition the signals to the MCU from 0-5V to 0-3.3V.
+		</p>		
+		<!--BOM-->
+		<div class="panel-group">
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					<h3 class="panel-title">
+					<a data-toggle="collapse" href="#collapse1">BOM</a>
+					</h3>
+				</div>
+				<div id="collapse1" class="panel-collapse collapse">  
+				<!-- Collapsible Conent -->
+				<table class="table table-striped">
+					<thead>					
+						<tr>
+						<th>RefDes</th>
+						<th>Name</th>						
+						<th>Values</th>
+						<th>Foot Print</th>
+						<th>Quantity</th>
+						<th>Manufacturer Number</th>
+						<th>Digikey Part Number</th>						
+						</tr>
+					</thead>
+					<tbody>
+					<!--
+					<tr>
+						<td>PCB</td>
+						<td></td>
+						<td></td>		
+						<td></td>
+						<td>1</td>
+						<td></td>
+						<td></td>						
+					</tr>
+					<tr>
+						<td>C1, C2, C3, C4, C5</td>
+						<td>Capacitor</td>
+						<td>25V, 0.1uF, 5%, X7R</td>		
+						<td>603</td>
+						<td>5</td>
+						<td>GRM188R71E104JA01D</td>
+						<td>490-9732-1-ND</td>						
+					</tr>
+					<tr>
+						<td>C6, C7, C8</td>
+						<td>Capacitor</td>
+						<td>25V, 1uF, 10%, X7R</td>		
+						<td>603</td>
+						<td>3</td>
+						<td>TMK107B7105KA-T</td>
+						<td>587-2984-1-ND</td>						
+					</tr>
+					<tr>
+						<td>LCD1</td>
+						<td>LCD 128 x 32 pixels</td>
+						<td>SPI Interface, 3V3</td>		
+						<td></td>
+						<td>1</td>
+						<td>NHD-C12832A1Z-FSW-FBW-3V3</td>
+						<td>NHD-C12832A1Z-FSW-FBW-3V3-ND</td>						
+					</tr>
+					-->
+					</tbody>
+				</table>
+
+				</div>
+			</div>
+		</div>
+	
+		<!--CODE-->
+		<h3>Code</h3>		
+		<p>I will upload when complete</p>
+		<h4></h4>
+		<p></p>
+	</div>
+	<br>
+        
+</div>
+<!--
+<footer class="container-fluid text-center">
+  <p> </p>
+</footer>
+-->
+
+
+</body>
+</html>

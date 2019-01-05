@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>ATSAM4S ADC</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">          
+  <meta name="description" content="ATSAM4S TUTORIAL">
+  <meta name="keywords" content="No ASF, ARM, Atmel-ICE, ATSAM4S">
+  <meta name="author" content="Robert M">	
+  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="css.css">
+	<script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+          (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+          })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+          ga('create', 'UA-50914817-1', 'mwmw.ca');
+          ga('send', 'pageview');
+	</script>  
+</head>
+
+<body>
+
+
+
+<nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="http://www.mwmw.ca">mwmw.ca</a>
+    </div>
+    <ul class="nav navbar-nav">
+      <li class="active"><a href="index.html">Atsam4s Tutorial</a></li>      
+      <li><a href="projects.html">Projects</a></li> 
+      <li><a href="contact.html">Contact</a></li> 
+    </ul>
+  </div>
+</nav>
+
+<div class="container-fluid text-left">    
+  <div class="row content">
+    <div class="col-sm-2 sidenav">	
+	<ul class="nav nav-pills nav-stacked btn-md ">
+	<li ><a href="index.html" class="active">Getting Started</a></li>	
+	<li><a href='hardware.html' >Hardware</a></li>
+	<li><a href='programming.html' >Programming</a></li>
+	<li><a href='bootloader.html' >Boot Loader</a></li>
+	<li><a href='bittwiddling.html' >Bit Twiddling</a></li>
+	<li><a href='gpio.html' ><b>GPIO</b> - General Purpose Input/Output</a></li>
+	<li><a href='clock.html' ><b>PMC</b> - System Clock</a></li>
+	<li><a href='interrupts.html' ><b>INT</b> - Interrupts</a></li>
+	<li><a href='uart.html' ><b>UART</b> - Universal Asynchronous Receiver-Transmitter</a></li>	
+	<li><a href='timercounter.html' ><b>TC</b> - Timer/Counter Overflow Interrupt</a></li>
+	<li><a href='timercounterdelay.html' ><b>TC</b> - Timer/Counter Compare Interrupt</a></li>
+	<li><a href='i2c.html' ><b>I2C</b> - Inter-integrated Circuit</a></li>
+	<li><a href='spi.html' ><b>SPI</b> - Serial Peripheral Interface</a></li>
+	<li><a href='gpio-glcd.html' ><b>GPIO</b> - GLCD</a></li>
+	<li><a href='rtc.html' ><b>RTC</b> - Real Time Clock</a></li>
+	<li><a href='rtt.html' ><b>RTT</b> - Real Time Timer</a></li>
+	<li class="active"><a href='adc.html' ><b>ADC</b> - Analog Digital Converter</a></li>
+	<li><a href='dacc.html' ><b>DACC</b> - Digital Analog Converter</a></li>
+	<li><a href='sleep.html' ><b>SUPCC</b> - Sleep/Wake/Power Saving</a></li>
+	<li><a href='qdec.html' ><b>QDEC</b> - Quadrature Signal Decoder</a></li>
+	<li><a href='pwm.html' ><b>PWM</b> - Pulse Width Modulation</a></li>
+	<li><a href='debugging.html' >Debugging</a></li>
+	</ul>
+    </div>
+	
+    <div class="col-sm-8 text-left"> 	
+	<h2>ADC: Analog to Digital Conversion</h2>
+		
+	<p>The ADC on the ATSAM4S has 16 channels with 12 bits of resolution.  The ADC clock can be configured by an 8 bit prescaler(fcpu/2 if prescaler=0 and fcpu/512 if prescaler = 255).  Check page 1172 in the datasheet clock frequency parameters.  Unlike the AVR and XMEGA, the SAM4S does not have an internal voltage reference and we must connect the ADVREF pin to a voltage source. <br><br>The PIO controller setup is a bit different for the ADC compared to the other peripherals.  For other peripherals we disable the PIO for the pins we want to use by setting bits in the REG_PIA_PDR.  For the ADC, we set bits in the REG_ADC_CHER - adc channel enable register.  When a bit for a corresponding pin is set that adc channel is enabled, pio disabled on the corresponding pin, auto configured to input, pull up enabled and connected to ground.</p>
+	<p><span class="text-danger">*note*</span> Every time you change the input voltage reference on the ADVREF, a one time autoconfiguration should be run.</p>
+
+<h3>Setup</h3>
+
+<ul>
+	<li>enable ADC clock in PMC</li>
+	<li>enable interrupts for ADC in NVIC</li>
+	<li>enable ADC channels (disable PIO)</li>
+	<li>set ADC clock prescaler</li>
+	<li>set IBCTL in REG_ADC_ACR depending on frequency of the ADC clock</li>
+	<li>enable interrupt type</li>
+	<li>start a conversion</li>
+	<li>write interrupt handler</li>
+</ul>
+<p>In the first example we will connect the output of an external temperature sensor to ADC channel 0, which is on PA17.<br><br>
+<a href='images/adclm35.jpg'><img src='images/adclm35_small.jpg' style="border:1px solid #aaaaaa"></a></br><br>
+To enable channels, set the appropriate bits in the REG_ADC_CHER register.<br><br>
+There are two interrupts that can be used to trigger an end of conversion event.  EOC (end of conversion) or DRDY (data ready).  Both bits can be set in the REG_ADC_IER register.  To clear the EOC interrupt flag in the REG_ADC_ISR the REG_ADC_CDRx (channel data register) needs to be read. To clear the DRDY interrupt flag the REG_ADC_LCDR (last converted data register) needs to be read.<br><br>
+After starting a conversion by setting the start bit in the REG_ADC_CR the ADC will convert the data and trigger an interrupt when finished.<br><br>
+<span class='text-danger'>*note*</span> On page 1117 it shows the ADC Channel Data Register (REG_ADC_CDRx)<br><br>
+<a href='images/reg_adc_cdrx.jpg'><img src='images/reg_adc_cdrx_small.jpg' style="border:1px solid #aaaaaa"></a><br><br>
+It seems like you can read the registers in as REG_ADC_CDR0, REG_ADC_CDR1, ... , REG_ADC_CDR15, but if you look at the definitions in adc.h you can only find REG_ADC_CDR which is set to the address 0x40038050 which is channel0.  We have to make our own definitions to read the other registers.<br><br>
+Here is a list of the registers and addresses for REG_ADC_CDRx:<br><br>
+<a href='images/reg_adc_cdr.jpg'><img src='images/reg_adc_cdr_small.jpg' style="border:1px solid #aaaaaa"></a><br><br>
+So, if we want to read the value of REG_ADC_CDR15 (channel data register 15) then in our setup we can define this as:</p>
+<pre><span class="define">#define REG_ADC_CDR15  </span> (*(__I  uint32_t*)0x4003808CU) </pre>
+
+
+<h3>Example: Read channel 0</h3>
+
+<p>We will attach a temperature sensor to channel0 and read the voltage output from our sensor to get the room temperature.</p>
+<pre>
+12 bit Resolution/advref voltage = adc reading/voltage
+4095/3300 = 266/voltage
+voltage = 214mv
+</pre>
+
+<p>For this particular sensor, it output 10mv for every degree C.  That means it's 21.4 C in this room.</p>
+
+<pre>
+
+<span class="flow">#include </span><span class="method">"sam.h"</span>
+<span class="flow">#include </span><span class="method">"basic_uart.h"</span>
+
+<span class="var">void</span> <span class="method">clock_init</span>(){
+    <span class="define">REG_CKGR_MOR</span> |= <span class="define">CKGR_MOR_KEY_PASSWD</span> | <span class="define">CKGR_MOR_MOSCXTEN</span>;
+    <span class="flow">while</span> (!(<span class="define">REG_PMC_SR</span> & <span class="define">PMC_SR_MOSCXTS</span>));
+    <span class="define">REG_CKGR_MOR </span>|= <span class="define">CKGR_MOR_KEY_PASSWD </span>| <span class="define">CKGR_MOR_MOSCSEL</span>;
+    <span class="define">REG_PMC_MCKR </span>|= <span class="define">MC_MCKR_CSS_MAIN_CLK</span>;
+    <span class="flow">while </span>(!(<span class="define">REG_PMC_SR </span>& <span class="define">PMC_SR_MCKRDY</span>));
+    <span class="define">REG_PMC_MCKR </span>|= <span class="define">PMC_MCKR_PRES_CLK_1</span>;
+    <span class="flow">while</span> (!(<span class="define">REG_PMC_SR</span> & <span class="define">PMC_SR_MCKRDY</span>));
+}
+
+<span class="var">void </span><span class="method">ADC_init</span>(){
+    <span class="comment">/*enabling the channel automatically gives peripheral control of the pin instead of the PIO
+    automatically configures pin to input, pull up enabled and connect to ground*/</span>
+	
+    <span class="comment">//enable ADC channel0</span>
+    <span class="define">REG_ADC_CHER</span> |= <span class="define">ADC_CHER_CH0</span>;
+	
+    <span class="comment">//set ADC clock to 1mhz</span>
+    <span class="comment">/*datasheet page 1172
+    for clock 500khz to 1mhz set ADC_ACR IBCTL =  01
+    */</span>
+    <span class="define">REG_ADC_ACR</span> |= <span class="define">ADC_ACR_IBCTL</span>(1);
+    <span class="comment">/*clock prescaler = (fcpu / (2*adc_freq)) - 1
+    20,000,000 /  (2*1000000) - 1 = 9
+    */</span>
+    <span class="define">REG_ADC_MR </span>|= <span class="define">ADC_MR_PRESCAL</span>(9);
+	
+    <span class="comment">//Enable ADC interrupts for end of conversion</span>
+    <span class="define">REG_ADC_IER</span> |= <span class="define">ADC_IER_EOC0</span>;
+		
+    <span class="comment">//Need to just run once. If you change the voltage on ADVREF you need to run again</span>
+    <span class="comment">//ADC software reset</span>
+    <span class="comment">//REG_ADC_CR |= ADC_CR_SWRST;</span>
+    <span class="comment">//autocalibration</span>
+    <span class="comment">//REG_ADC_CR |= ADC_CR_AUTOCAL;	</span>
+}
+
+<span class="var">int </span><span class="method">main</span>(<span class="var">void</span>)
+{
+    <span class="comment">/* Initialize the SAM system */</span>
+    <span class="method">SystemInit</span>();
+    <span class="method">clock_init</span>();
+    <span class="method">UART_Init</span>();
+	
+    <span class="comment">//enable clock for ADC</span>
+    <span class="define">REG_PMC_PCER0</span>|= <span class="define">PMC_PCER0_PID29</span>;
+	
+    <span class="comment">//enable ADC interrupts</span>
+    <span class="method">NVIC_EnableIRQ</span>(<span class="define">ADC_IRQn</span>);
+	
+    <span class="method">ADC_init</span>();
+	
+    <span class="comment">//start a conversion</span>
+    <span class="define">REG_ADC_CR</span> |= <span class="define">ADC_CR_START</span>;
+    <span class="flow">while </span>(1)
+    {
+    }	
+}
+
+<span class="comment">//when ADC conversion is complete it will trigger an interrupt and interrupt will end by starting a new conversion</span>
+<span class="var">void </span><span class="method">ADC_Handler</span>( <span class="var">void</span>) {	
+    <span class="comment">//read interrupt flag status register</span>
+    <span class="var">uint32_t</span> status = <span class="define">REG_ADC_ISR</span>;
+    <span class="var">uint32_t</span> adcData;
+    <span class="flow">if </span>((status & <span class="define">ADC_IMR_EOC15</span>) > 0){			
+        <span class="comment">//reading this register clears flag in ISR</span>
+        adcData = <span class="define">REG_ADC_CDR</span>;
+        <span class="method">printString</span>("Sensor Output: ");
+        <span class="method">printWord</span>(adcData);
+        <span class="method">printString</span>("\r\n");					
+	}
+    <span class="comment">//start the next conversion</span>
+    <span class="define">REG_ADC_CR</span> |= <span class="define">ADC_CR_START</span>;
+}
+
+</pre>
+
+<h3>Example: Read channel 15 the internal temperature sensor</h3>
+<p>Channel 15 is an internal temperature sensor that give a linear output of 4.7mv/degree C. There is an offset that needs to be calibrated. Information on the temperature sensor can be found in the datasheet on page 1183.  In addition to enabling chanel 15 the programmer must also enable the temperature sensor by setting the TSON bit in the REG_ADC_ACR register.</p>
+
+<pre>
+
+<span class="flow">#include </span><span class="method">"sam.h"</span>
+<span class="flow">#include </span><span class="method">"basic_uart.h"</span>
+
+<span class="var">void</span> <span class="method">clock_init</span>(){
+    <span class="define">REG_CKGR_MOR</span> |= <span class="define">CKGR_MOR_KEY_PASSWD</span> | <span class="define">CKGR_MOR_MOSCXTEN</span>;
+    <span class="flow">while</span> (!(<span class="define">REG_PMC_SR</span> & <span class="define">PMC_SR_MOSCXTS</span>));
+    <span class="define">REG_CKGR_MOR </span>|= <span class="define">CKGR_MOR_KEY_PASSWD </span>| <span class="define">CKGR_MOR_MOSCSEL</span>;
+    <span class="define">REG_PMC_MCKR </span>|= <span class="define">MC_MCKR_CSS_MAIN_CLK</span>;
+    <span class="flow">while </span>(!(<span class="define">REG_PMC_SR </span>& <span class="define">PMC_SR_MCKRDY</span>));
+    <span class="define">REG_PMC_MCKR </span>|= <span class="define">PMC_MCKR_PRES_CLK_1</span>;
+    <span class="flow">while</span> (!(<span class="define">REG_PMC_SR</span> & <span class="define">PMC_SR_MCKRDY</span>));
+}
+
+<span class="var">void </span><span class="method">ADC_init</span>(){	
+    <span class="comment">/*enabling the channel automatically gives peripheral control of the pin instead of the PIO
+    automatically configures pin to input, pull up enabled and connect to ground*/</span>
+	
+    <span class="comment">//enable ADC channel15 (internal temperature sensor)</span>
+    <span class="define">REG_ADC_CHER </span>|= <span class="define">ADC_CHER_CH15</span>;
+    <span class="comment">//enable internal temperature sensor</span>
+    <span class="define">REG_ADC_ACR </span>|= <span class="define">ADC_ACR_TSON</span>;
+	
+    <span class="comment">//set ADC clock to 1mhz</span>
+    <span class="comment">/*datasheet page 1172
+    for clock 500khz to 1mhz set ADC_ACR IBCTL =  01
+    */</span>
+    <span class="define">REG_ADC_ACR </span>|= <span class="define">ADC_ACR_IBCTL</span>(1);
+    <span class="comment">/*clock prescaler = (fcpu / (2*adc_freq)) - 1
+    20,000,000 /  (2*1000000) - 1 = 9
+    */</span>
+    <span class="define">REG_ADC_MR </span>|= <span class="define">ADC_MR_PRESCAL</span>(9);
+	
+    <span class="comment">//Enable ADC interrupts for end of conversion</span>
+    <span class="define">REG_ADC_IER </span>|= <span class="define">ADC_IER_EOC15</span>;
+	
+    <span class="comment">//Need to just run once. If you change the voltage on ADVREF you need to run again</span>
+    <span class="comment">//ADC software reset</span>
+    <span class="comment">//REG_ADC_CR |= ADC_CR_SWRST;</span>
+    <span class="comment">//autocalibration</span>
+    <span class="comment">//REG_ADC_CR |= ADC_CR_AUTOCAL;	</span>
+}
+
+<span class="define">#define REG_ADC_CDR15   (*(__I  uint32_t*)0x4003808CU)</span><span class="comment"> /**< \brief (ADC) Channel Data Register */</span>
+
+<span class="var">int </span><span class="method">main</span>(void)
+{	
+    <span class="comment">/* Initialize the SAM system */</span>
+    <span class="method">SystemInit</span>();
+    <span class="method">clock_init</span>();
+    <span class="method">UART_Init</span>();
+	
+    <span class="comment">//enable clock for ADC</span>
+    <span class="define">REG_PMC_PCER0 </span>|= <span class="define">PMC_PCER0_PID29</span>;
+	
+    <span class="comment">//enable ADC interrupts</span>
+    <span class="method">NVIC_EnableIRQ</span>(<span class="define">ADC_IRQn</span>);
+	
+    <span class="method">ADC_init</span>();	
+    <span class="comment">//start a conversion</span>
+    <span class="define">REG_ADC_CR</span> |= <span class="define">ADC_CR_START</span>;
+	    
+    <span class="flow">while </span>(1)
+    {
+    }	
+}
+
+<span class="comment">//when ADC conversion is complete it will trigger an interrupt and interrupt will end by starting a new conversion</span>
+<span class="var">void </span><span class="method">ADC_Handler</span>( <span class="var">void</span>) {	
+	<span class="comment">//read interrupt flag status register</span>
+	<span class="var">uint32_t </span>status = <span class="define">REG_ADC_ISR</span>;
+	<span class="var">uint32_t </span>adcData;
+	<span class="flow">if </span>((status & <span class="define">ADC_IMR_EOC15</span>) > 0){			
+			<span class="comment">//reading this register clears flag in ISR</span>
+			adcData = <span class="define">REG_ADC_CDR15</span>;
+			<span class="method">printString</span>("Sensor Output: ");
+			<span class="method">printWord</span>(adcData);
+			<span class="method">printString</span>("\r\n");			
+	}
+	<span class="define">REG_ADC_CR </span>|= <span class="define">ADC_CR_START</span>;	
+}
+		
+</pre>		
+		
+		
+		
+	</div>
+	<br>
+        
+</div>
+
+<footer class="container-fluid text-center">
+  <p> </p>
+</footer>
+
+
+</body>
+</html>

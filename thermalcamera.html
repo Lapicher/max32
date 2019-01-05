@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>ATSAM4S Thermal Camera</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">          
+  <meta name="description" content="ATSAM4S TUTORIAL">
+  <meta name="keywords" content="No ASF, ARM, Atmel-ICE, ATSAM4S">
+  <meta name="author" content="Robert M">	
+  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="css.css">
+	<script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+          (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+          })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+          ga('create', 'UA-50914817-1', 'mwmw.ca');
+          ga('send', 'pageview');
+	</script>  
+</head>
+
+<body>
+
+
+
+<nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="http://www.mwmw.ca">mwmw.ca</a>
+    </div>
+    <ul class="nav navbar-nav">
+      <li><a href="index.html">Atsam4s Tutorial</a></li>      
+      <li class="active"><a href="projects.html">Projects</a></li> 
+      <li><a href="contact.html">Contact</a></li> 
+    </ul>
+  </div>
+</nav>
+
+<div class="container-fluid text-left">    
+  <div class="row content">
+    <div class="col-sm-2 sidenav">	
+	<ul class="nav nav-pills nav-stacked btn-md ">	
+	<li class="active"><a href='thermalcamera.html' >Flir Thermal Camera</a></li>	
+	<li><a href='GAMMA_PHOTON_DETECTOR.html' >Gamma-Photon Detector</a></li>
+	<li ><a href='NHD-C12832A1Z-FSW-FBW-3V3.html' >Newhaven LCD Module</a></li>
+	<li><a href='WEATHER.html' >Weather Station</a></li>	
+	</ul>	
+    </div>
+	
+    <div class="col-sm-8 text-left"> 	
+		<h2>Thermal Camera</h2>
+		<p>Using the libraries created from the tutorial we will make a thermal camera based on the <a href='http://cvs.flir.com/lepton-data-brief' class='blink'>flir lepton sensor</a>.  It will feature a 240 x 320 4 wire resistive touch screen and mini sdcard slot for saving images.</p>
+		<p><a href="images/thermalcamera.jpg"><img src="images/thermalcamera_small.jpg" class="img-responsive"></a></p>
+		<p><a href="images/thermal1.png"><img src="images/thermal1_s.png" class="img-responsive"></a></p> 
+		<p><a href="images/thermal2.png"><img src="images/thermal2_s.png" class="img-responsive"></a></p>
+				
+		
+		<p>Check youtube for a sneak peak.  This was done on an Xmega that was overclocked to 40mhz.  I will be working to convert this to ARM and also create a board that you can order from Dirtypcbs.com</p>
+		<a href='https://youtu.be/tl-L-wKbtlc' class='blink'>Video 1</a><br>
+		<a href='https://youtu.be/-KYAuxCcgAw' class='blink'>Video 2</a><br><br>			
+		<h4>BOM</h4>
+		<a href="files/thermalcamera/Camera_BOM.htm">View BOM</a>
+		<h4>Block Diagram</h4>
+		<a href='images/blockdiagram.jpg'><img src='images/blockdiagram_small.jpg' class="img-responsive" style="border:1px solid #aaaaaa"></a>
+		<h4>Schematic</h4>
+		<a href='images/schematic1.jpg'><img src='images/schematic1_small.jpg' style="border:1px solid #aaaaaa"></a>
+		<a href='images/schematic2.jpg'><img src='images/schematic2_small.jpg' style="border:1px solid #aaaaaa"></a>
+		<h4>Gerber</h4>
+		<a href='files/thermalcamera/atsam4sflir.zip'><img src='images/gerbersmall.jpg' class="img-responsive"></a><br><br>
+		<a href='images/thermalcamerapcb.jpg'><img src='images/thermalcamerapcb_small.jpg' class="img-responsive"></a>
+		<h4>3D Print</h4>
+		<a href='files/thermalcamera/camera_stl.zip'><img src='images/3dprint_ms.jpg' class="img-responsive"></a>
+		<h4>Code</h4>
+		Not ready yet
+	</div>	        
+</div>
+</div>
+
+	
+
+<!--
+<footer class="container-fluid text-center">
+  <p> </p>
+</footer>
+-->
+<br><br><br>
+</body>
+</html>
